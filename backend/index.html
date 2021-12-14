@@ -5,46 +5,58 @@
     </head>
     <body>
         <h1>WebSocket Chat</h1>
-        <button onClick="showForm(event)" id="connect">Connect</button>
-        <form action="" onsubmit="sendMessage(event)" id="form" style="display: none">
-            <input type="text" id="messageText" autocomplete="off"/>
+        <form action="" onsubmit="sendMessage(event)">
+            <label>Room name: <input type="text" id="room" autocomplete="off"/></label>
+            <button onclick="connect(event)">Connect</button>
+            <hr>
+            <div class="start">
+                <label>Start Room: <input type="text" id="start" autocomplete="off"/></label>
+                <button onclick="startRoom()">Start</button>
+            </div>
+            
+            <hr>
+            <label>Message: <input type="text" id="messageText" autocomplete="off"/></label>
             <button>Send</button>
         </form>
         <ul id='messages'>
         </ul>
         <script>
-            var clientID = Date.now();
-            var ws = new WebSocket(`ws://192.168.1.45:8000/ws/${clientID}`);
-
-            function processMessage(event) {
-                var messages = document.getElementById('messages')
-                var message = document.createElement('li')
-                var content = document.createTextNode(event.data)
-                message.appendChild(content);
-                messages.appendChild(message);
+        var ws = null;
+            function connect(event) {
+                var room = document.getElementById("room")
+                ws = new WebSocket("ws://192.168.1.45:8000/rooms/" + room.value);
+                console.log(room.value)
+                ws.onmessage = function(event) {
+                    var messages = document.getElementById('messages')
+                    var message = document.createElement('li')
+                    var content = document.createTextNode(event.data)
+                    message.appendChild(content)
+                    messages.appendChild(message)
+                };
+                event.preventDefault()
             }
-
-            ws.onmessage = processMessage;
-
             function sendMessage(event) {
                 var input = document.getElementById("messageText")
-                var message = document.createElement('li')
-                var content = document.createTextNode(input.value)
-                message.appendChild(content);
-                messages.appendChild(message);
-                ws.send(input.value);
-
+                ws.send(input.value)
                 input.value = ''
                 event.preventDefault()
             }
-
-            function showForm(event) {
-                var button = document.getElementById("connect");
-                var form = document.getElementById("form");
-                button.style.display = "none";
-                form.style.display = "block";
+            async function startRoom(){
+                let startRoom = document.getElementById("start");
+                let respose = await fetch('http://192.168.1.45:8000/generate-room', {
+                    method: "POST", 
+                    headers: {
+                        'Content-Type': 'application/json;charset=utf-8'
+                    },
+                    body: JSON.stringify({
+                        "name": startRoom.value
+                    })
+                })
+                let sartObj = document.querySelector('start')
+                let text = document.createElement('p');
+                text.textContent = respose.json();
+                sartObj.appendChild(text);
             }
-
         </script>
     </body>
 </html>
