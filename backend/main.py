@@ -1,32 +1,41 @@
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse
 from starlette.websockets import WebSocketDisconnect
-from room import WebSocketManager
+from sockmanager import WebSocketManager
+from helpers.temp_dev import Reader
+from models import Room
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 
-html = ""
-with open('index.html', 'r') as f:
-    html = f.read()
 
+
+
+# delete this
+templates = {
+    'index': Reader('index.html').read_html()
+}
 
 @app.get("/")
 async def get():
-    return HTMLResponse(html)
+    return HTMLResponse(templates['index'])
 
 
-@app.post("/generate-room")
-async def create(name: Request):
-    res = await name.json()
-    manager = WebSocketManager(str(res["name"]))
-
-    @app.websocket(f"/rooms/{manager}")
-    async def websocket_endpoint(websocket: WebSocket):
-        await manager.connect(websocket)
-        while True:
-            try:
-                data = await websocket.receive_text()
-                await manager.broadcast(f"lox: {data}")
-            except WebSocketDisconnect:
-                manager.disconnect(websocket)
-                await manager.broadcast(f"Client left the chat")
+@app.post("/")
+async def generateRoom(room: Room):
+    print(jsonable_encoder(room))
+    return JSONResponse(content=jsonable_encoder(room))
+    # roomName, roomPassword = request["name"], request["password"]
     
+    # manager = WebSocketManager(roomName)
+    # @app.websocket(f"/rooms/{manager}")
+    # async def websocket_endpoint(websocket: WebSocket):
+    #     await manager.connect(websocket)
+    #     try:
+    #         while True:
+    #             data = await websocket.receive_text()
+    #             await manager.broadcast(f"lox: {data}")
+    #     except WebSocketDisconnect:
+    #         manager.disconnect(websocket)
+    #         await manager.broadcast(f"Client left the chat")

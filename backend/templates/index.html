@@ -10,7 +10,7 @@
             <button onclick="connect(event)">Connect</button>
             <hr>
             <div class="start">
-                <label>Start Room: <input type="text" id="start" autocomplete="off"/></label>
+                <label>Start Room: <input type="text" id="startN" autocomplete="off"/> <input type="text" id="startP" autocomplete="off"/></label>
                 <button onclick="startRoom()">Start</button>
             </div>
             
@@ -42,20 +42,20 @@
                 event.preventDefault()
             }
             async function startRoom(){
-                let startRoom = document.getElementById("start");
-                let respose = await fetch('http://192.168.1.45:8000/generate-room', {
+                let startRoomN = document.getElementById("startN");
+                let startRoomP = document.getElementById("startP");
+                await fetch('http://192.168.1.45:8000/', {
                     method: "POST", 
                     headers: {
                         'Content-Type': 'application/json;charset=utf-8'
                     },
                     body: JSON.stringify({
-                        "name": startRoom.value
+                        "name": startRoomN.value,
+                        "password": startRoomP.value
                     })
                 })
-                let sartObj = document.querySelector('start')
-                let text = document.createElement('p');
-                text.textContent = respose.json();
-                sartObj.appendChild(text);
+                .then(res => res.json())
+                .then(data => {console.log(data)})
             }
         </script>
     </body>
