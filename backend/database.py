@@ -1,4 +1,4 @@
-from helpers.tables import Users
+from utils.tables import Users
 from sqlalchemy import create_engine, MetaData, String, ForeignKey, Boolean, Integer
 from sqlalchemy.orm import sessionmaker, Session
 URL = 'sqlite:///sqlite.db'

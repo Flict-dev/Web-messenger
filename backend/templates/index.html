@@ -9,14 +9,15 @@
             <label>Room name: <input type="text" id="room" autocomplete="off"/></label>
             <button onclick="connect(event)">Connect</button>
             <hr>
-            <div class="start">
-                <label>Start Room: <input type="text" id="startN" autocomplete="off"/> <input type="text" id="startP" autocomplete="off"/></label>
-                <button onclick="startRoom()">Start</button>
-            </div>
-            
-            <hr>
             <label>Message: <input type="text" id="messageText" autocomplete="off"/></label>
             <button>Send</button>
+        </form>
+        <hr>
+        <form action="" class="room-form">
+            <div class="start">
+                <label>Start Room: <input type="text" id="startN" autocomplete="off"/> <input type="text" id="startP" autocomplete="off"/></label>
+                <button >Start</button>
+            </div>
         </form>
         <ul id='messages'>
         </ul>
@@ -41,6 +42,12 @@
                 input.value = ''
                 event.preventDefault()
             }
+            let form = document.querySelector(".room-form");
+            form.addEventListener("submit", (event) => {
+                event.preventDefault();
+                startRoom();
+            })
+
             async function startRoom(){
                 let startRoomN = document.getElementById("startN");
                 let startRoomP = document.getElementById("startP");
