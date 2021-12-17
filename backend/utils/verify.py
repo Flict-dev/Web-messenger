@@ -1,2 +1,0 @@
-class Verify:
-  pass 

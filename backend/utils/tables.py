@@ -41,7 +41,6 @@ class Users(Base):
 
     __table_args__ = (
         PrimaryKeyConstraint('id', name='user_pk'),
-        UniqueConstraint('name')
     )
 
 
@@ -51,7 +50,7 @@ class Rooms(Base):
     id = Column(Integer, autoincrement=True)
     name = Column(String(100), nullable=False)
     password = Column(String, nullable=False)
-    users = relationship(Users)
+    users = relationship(Users, back_populates='rooms')
 
     __table_args__ = (
         PrimaryKeyConstraint('id', name='room_pk'),

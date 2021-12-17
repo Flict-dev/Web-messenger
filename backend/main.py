@@ -1,16 +1,29 @@
-from fastapi import FastAPI, WebSocket, Request, Header, Cookie, HTTPException, status
+from fastapi import (FastAPI,
+                     WebSocket,
+                     Request,
+                     HTTPException,
+                     status,
+                     Header,
+                     Cookie,
+                     )
 from fastapi.responses import HTMLResponse
-from starlette.websockets import WebSocketDisconnect
-from sockmanager import WebSocketManager
-from utils.temp_dev import Reader
-from models import Room
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.websockets import WebSocketDisconnect
 from typing import Optional, List
 from utils.crypt import Encoder
+from utils.helpers import Parser, Reader
+from sockmanager import WebSocketManager
+from models import RoomReq
+from database import Database
+from secrets import token_hex
 
+SECRET_KEY = token_hex(32)
+URL = 'sqlite:///sqlite.db'
+
+parser = Parser()
 encoder = Encoder()
+database = Database(URL)
 app = FastAPI()
 
 # delete this
@@ -25,13 +38,16 @@ async def get():
 
 
 @app.post("/")
-async def generateRoom(room: Room, cookie: Optional[str] = Cookie(None)):
+async def generateRoom(room: RoomReq):
     try:
-        return {
-            "Room": JSONResponse(jsonable_encoder(room)),
-            "link": encoder.gen_hash_link(jsonable_encoder(room)['name']),
-            "password": encoder.hash_password(jsonable_encoder(room)['password'])
-        }
+        plainName, plainPassword = parser.parse_room_data(room)
+        link = encoder.gen_hash_link(plainName)
+        database.create_room(plainName, encoder.hash_password(plainPassword))
+
+        # return {
+        #     "link": ,
+        #     "password":
+        # }
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -39,7 +55,6 @@ async def generateRoom(room: Room, cookie: Optional[str] = Cookie(None)):
                 "Code": 400,
                 "error": str(error)
             })
-    # roomName, roomPassword = request["name"], request["password"]
 
     # manager = WebSocketManager(roomName)
     # @app.websocket(f"/rooms/{manager}")
