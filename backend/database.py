@@ -30,7 +30,7 @@ class Database:
                 session.commit()
                 roomId = session.query(
                     func.max(roomTable.columns['id'])
-                ).all()[0]
+                ).first()[0]
                 self.create_user({
                     'name': 'Admin',
                     'admin': True,
@@ -38,7 +38,7 @@ class Database:
                 })
                 return True
         except IntegrityError:
-            return False
+            raise ValueError('roomName')
 
     def create_user(self, data: Dict) -> bool:
         userTable = self.get_table('users')
@@ -48,4 +48,4 @@ class Database:
                 session.commit()
             return True
         except IntegrityError:
-            return False
+            raise ValueError('userName')

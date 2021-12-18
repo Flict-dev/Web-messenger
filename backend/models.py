@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 
-class Room(BaseModel):
+class RoomReq(BaseModel):
     name: str
     password: str
 

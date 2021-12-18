@@ -48,13 +48,12 @@ class Rooms(Base):
     __tablename__ = 'rooms'
 
     id = Column(Integer, autoincrement=True)
-    name = Column(String(100), nullable=False)
+    name = Column(String(100), unique=True, nullable=False)
     password = Column(String, nullable=False)
     users = relationship(Users, back_populates='rooms')
 
     __table_args__ = (
         PrimaryKeyConstraint('id', name='room_pk'),
-        UniqueConstraint('name')
     )
 
 

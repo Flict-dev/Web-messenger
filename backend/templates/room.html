@@ -6,27 +6,20 @@
     <body>
         <h1>WebSocket Chat</h1>
         <form action="" onsubmit="sendMessage(event)">
-            <label>Room name: <input type="text" id="room" autocomplete="off"/></label>
-            <button onclick="connect(event)">Connect</button>
-            <hr>
             <label>Message: <input type="text" id="messageText" autocomplete="off"/></label>
+            <button onclick="connect(event)">Connect</button>
             <button>Send</button>
         </form>
         <hr>
-        <form action="" class="room-form">
-            <div class="start">
-                <label>Start Room: <input type="text" id="startN" autocomplete="off"/> <input type="text" id="startP" autocomplete="off"/></label>
-                <button >Start</button>
-            </div>
-        </form>
         <ul id='messages'>
         </ul>
         <script>
         var ws = null;
             function connect(event) {
-                var room = document.getElementById("room")
-                ws = new WebSocket("ws://192.168.1.45:8000/rooms/" + room.value);
-                console.log(room.value)
+                event.preventDefault()
+                startRoom()
+                let url = window.location.pathname.slice(7, -1)
+                ws = new WebSocket(`ws://192.168.1.45:8000/rooms/${url}/`);
                 ws.onmessage = function(event) {
                     var messages = document.getElementById('messages')
                     var message = document.createElement('li')
@@ -42,23 +35,17 @@
                 input.value = ''
                 event.preventDefault()
             }
-            let form = document.querySelector(".room-form");
-            form.addEventListener("submit", (event) => {
-                event.preventDefault();
-                startRoom();
-            })
-
             async function startRoom(){
                 let startRoomN = document.getElementById("startN");
                 let startRoomP = document.getElementById("startP");
-                await fetch('http://192.168.1.45:8000/', {
+                let url = window.location.pathname.slice(7, -1)
+                await fetch(`http://192.168.1.45:8000/rooms/${url}`, {
                     method: "POST", 
                     headers: {
                         'Content-Type': 'application/json;charset=utf-8'
                     },
                     body: JSON.stringify({
-                        "name": startRoomN.value,
-                        "password": startRoomP.value
+                        "run": true,
                     })
                 })
                 .then(res => res)

@@ -19,5 +19,6 @@ class WebSocketManager:
             await connection.send_text(message)
 
     async def disconnect(self, websocket: WebSocket) -> None:
-        self.connections.remove(websocket)
         await self.broadcast('Client leave')
+        self.connections.remove(websocket)
+        
