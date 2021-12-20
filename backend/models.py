@@ -6,6 +6,10 @@ class RoomReq(BaseModel):
     password: str
 
 
+class RoomAuth(BaseModel):
+    password: str
+
+
 class UserAuth(BaseModel):
     id: int
     accessToken: dict

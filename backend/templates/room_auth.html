@@ -7,8 +7,8 @@
         <h1>WebSocket Chat</h1>
         <form action="" class="room-form">
             <div class="start">
-                <label>Start Room: <input type="text" id="startN" autocomplete="off"/> <input type="text" id="startP" autocomplete="off"/></label>
-                <button >Start</button>
+                <label>Validate password</label>: <input type="text" id="startP" autocomplete="off"/></label>
+                <button >Validate</button>
             </div>
         </form>
         <ul id='messages'>
@@ -41,15 +41,14 @@
             })
 
             async function startRoom(){
-                let startRoomN = document.getElementById("startN");
                 let startRoomP = document.getElementById("startP");
-                await fetch('http://192.168.1.45:8000/', {
+                let url = window.location.pathname.slice(7,)
+                await fetch(`http://192.168.1.45:8000/rooms/${url}`, {
                     method: "POST", 
                     headers: {
                         'Content-Type': 'application/json;charset=utf-8'
                     },
                     body: JSON.stringify({
-                        "name": startRoomN.value,
                         "password": startRoomP.value
                     })
                 })

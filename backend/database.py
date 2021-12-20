@@ -1,5 +1,5 @@
 from typing import Dict
-from sqlalchemy import create_engine, MetaData, Table, func
+from sqlalchemy import create_engine, MetaData, Table, func, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
 
@@ -49,3 +49,12 @@ class Database:
             return True
         except IntegrityError:
             raise ValueError('userName')
+
+    def get_room_password(self, name: str) -> str:
+        roomTable = self.get_table('rooms')
+        try:
+            with self.session as session:
+                room = session.query(roomTable).where(text(f'name == "{name}"')).all() # разобраться с where 
+                return room[0][2]
+        except IndexError:
+            raise ValueError('Invalid password or name')

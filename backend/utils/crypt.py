@@ -9,7 +9,7 @@ class Validate:
             r'^(?=.*[0-9].*)(?=.*[a-z].*)(?=.*[A-Z].*)[0-9a-zA-Z$%!#^]{8,}$'
         )
 
-    def password(self, password):
+    def password(self, password) -> bool:
         return self.pattern_password.match(password)
 
 
@@ -20,26 +20,48 @@ class Encoder:
         self.sessionKey = sessionKey
         self.sessionAlg = sessionAlg
 
-    def gen_hash_link(self, name) -> str:
-        return str(self.context.hash(name))\
-            .split('$')[-1]\
+    def gen_hash_link(self, name: str) -> str:
+        return name.split('$')[-1]\
             .replace("/", 'slash')\
-            .replace("\\", 'slash')
+            .replace("\\", 'hsals')
 
-    def hash_password(self, password) -> str:
+    def hash_password(self, password: str) -> str:
         if self.validate.password(password):
             return self.context.hash(password)
         raise ValueError("password")
 
-    def create_session(
-        self, roomName: str, roomPassword: str, admin: bool
-    ) -> str:
+    def hash_name(self, name: str) -> str:
+        if name:
+            return self.context.hash(name)
+        raise ValueError("name")
+
+    def encode_session(self, roomName: str, roomPassword: str) -> str:
         return jwt.encode(
             payload={
                 "name": roomName,
                 "password": roomPassword,
-                "admin": admin
             },
             key=self.sessionKey,
             algorithm=self.sessionAlg
         )
+
+
+class Decoder:
+    def __init__(self, sessionKey: str, sessionAlg: str = 'HS256') -> None:
+        self.context = CryptContext(schemes=['bcrypt'])
+        self.sessionKey = sessionKey
+        self.sessionAlg = sessionAlg
+
+    def decode_session(self, session: str) -> dict:
+        return jwt.decode(session, key=self.sessionKey, algorithms=self.sessionAlg)
+
+    def verify_password(self, password: str, hashed_password: str) -> bool:
+        return self.context.verify(password, hashed_password)
+
+    def verify_name(self, name: str, hashed_name: str) -> bool:
+        return self.context.verify(name, hashed_name)
+
+    def verify_session(self, name: str, password: str, session: str) -> bool:
+        decoded_session = self.decode_session(session)
+        return (decoded_session['name'] == name and
+                self.verify_password(decoded_session['password'], password))

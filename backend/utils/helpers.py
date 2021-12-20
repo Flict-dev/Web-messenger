@@ -1,15 +1,6 @@
 from fastapi.encoders import jsonable_encoder
 
 
-class Verify:
-    pass
-
-
-"""
-This class should be deleted when the backend is ready
-"""
-
-
 class Reader:
     def __init__(self, filename: str):
         self.filename = filename
@@ -29,4 +20,4 @@ class Parser:
         raise ValueError('Parse error at room data')
 
     def parse_link_hash(self, hash: str) -> str:
-        pass
+        return '$2b$12$' + hash.replace('slash', '/').replace('hsals', '\\')
