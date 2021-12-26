@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from datetime import datetime
 from sqlalchemy import (
     create_engine,
@@ -7,7 +7,6 @@ from sqlalchemy import (
     Integer,
     String,
     Boolean,
-    UniqueConstraint,
     PrimaryKeyConstraint,
     DateTime,
     ForeignKey
@@ -17,13 +16,13 @@ from sqlalchemy import (
 Base = declarative_base()
 
 
-class Messagees(Base):
-    __tablename__ = 'messagees'
+class Messages(Base):
+    __tablename__ = 'Messagees'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     data = Column(String)
     created_at = Column(DateTime(), default=datetime.now)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(Integer, ForeignKey('Users.id'))
 
     __table_args__ = (
         PrimaryKeyConstraint('id', name='message_pk'),
@@ -31,26 +30,26 @@ class Messagees(Base):
 
 
 class Users(Base):
-    __tablename__ = 'users'
+    __tablename__ = 'Users'
 
     id = Column(Integer, autoincrement=True)
     name = Column(String(100))
     admin = Column(Boolean)
-    messages = relationship(Messagees)
-    room_id = Column(Integer, ForeignKey('rooms.id'))
-
+    messages = relationship("Messages", lazy='subquery', cascade="all, delete, delete-orphan",)
+    room_id = Column(Integer, ForeignKey('Rooms.id'))
+    room = relationship("Rooms", back_populates="users")
     __table_args__ = (
         PrimaryKeyConstraint('id', name='user_pk'),
     )
 
 
 class Rooms(Base):
-    __tablename__ = 'rooms'
+    __tablename__ = 'Rooms'
 
     id = Column(Integer, autoincrement=True)
     name = Column(String(100), unique=True, nullable=False)
     password = Column(String, nullable=False)
-    users = relationship(Users, back_populates='rooms')
+    users = relationship("Users", cascade="all, delete, delete-orphan", back_populates='room', lazy='subquery')
 
     __table_args__ = (
         PrimaryKeyConstraint('id', name='room_pk'),

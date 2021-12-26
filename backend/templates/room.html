@@ -18,7 +18,7 @@
             function connect(event) {
                 event.preventDefault()
                 startRoom()
-                let url = window.location.pathname.slice(7, -1)
+                let url = window.location.pathname.slice(7, )
                 ws = new WebSocket(`ws://192.168.1.45:8000/rooms/${url}/`);
                 ws.onmessage = function(event) {
                     var messages = document.getElementById('messages')
@@ -38,7 +38,7 @@
             async function startRoom(){
                 let startRoomN = document.getElementById("startN");
                 let startRoomP = document.getElementById("startP");
-                let url = window.location.pathname.slice(7, -1)
+                let url = window.location.pathname.slice(7,)
                 await fetch(`http://192.168.1.45:8000/rooms/${url}`, {
                     method: "POST", 
                     headers: {

@@ -60,7 +60,7 @@ async def create_room(room: RoomReq):
             }
         )
         sessionCookie = encoder.encode_session(
-            hashed_name, plainPassword
+            hashed_name, plainPassword, 'Admin'
         )
         return JSONResponse(
             status_code=status.HTTP_302_FOUND,
@@ -85,8 +85,8 @@ async def room_auth(name: str, session: Optional[str] = Cookie(None)):
     try:
         if session:
             hashed_name = parser.parse_link_hash(name)
-            hashed_password = database.get_room_password(hashed_name)
-            if decoder.verify_session(hashed_name, hashed_password, session):
+            room = database.get_room_by_name(hashed_name)
+            if decoder.verify_session(hashed_name, room.password, session):
                 return JSONResponse(
                     status_code=status.HTTP_302_FOUND,
                     content={"auth": True},
@@ -111,11 +111,19 @@ async def room_auth(name: str, session: Optional[str] = Cookie(None)):
 async def validate_room_password(name: str, auth: RoomAuth):
     try:
         hashed_name = parser.parse_link_hash(name)
-        password = jsonable_encoder(auth)['password']
-        if decoder.verify_password(password, database.get_room_password(hashed_name)):
+        json_data = jsonable_encoder(auth)
+        room = database.get_room_by_name(hashed_name)
+        password, username = json_data['password'], json_data['username']
+        if decoder.verify_password(password, room.password):
             sessionCookie = encoder.encode_session(
-                hashed_name, password
+                hashed_name, password, username
             )
+            if not database.check_user(username):
+                database.create_user({
+                    "name": username,
+                    "admin": False,
+                    "room_id": room.id,
+                })
             return JSONResponse(
                 status_code=status.HTTP_302_FOUND,
                 content={'Auth': True},
@@ -142,16 +150,59 @@ async def validate_room_password(name: str, auth: RoomAuth):
 
 @app.get('/rooms/{name}')
 async def room(name: str, session: Optional[str] = Cookie(None)):
-    return HTMLResponse(templates['room'])
+    try:
+        if session:
+            hashed_name = parser.parse_link_hash(name)
+            room = database.get_room_by_name(hashed_name)
+            if decoder.verify_session(hashed_name, room.password, session):
+                return HTMLResponse(
+                    templates['room'],
+                    status_code=status.HTTP_200_OK,
+                    headers={
+                        'Connection': 'keep-alive'
+                    }
+                )
+        return HTMLResponse(
+            templates['room_auth'],
+            status_code=status.HTTP_302_FOUND,
+            headers={
+                'Location': f'/rooms/{name}/auth',
+                'Connection': 'close'
+            }
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "Code": 400,
+            })
 
 
 @app.post('/rooms/{name}')
 async def start_room(name: str, session: Optional[str] = Cookie(None)):
-    manager = WebSocketManager(name)
+    try:
+        if session:
+            hashed_name = parser.parse_link_hash(name)
+            room = database.get_room_by_name(hashed_name)
+            if decoder.verify_session(hashed_name, room.password, session):
+                manager = WebSocketManager(name)
 
-    @app.websocket(f"/rooms/{manager}/")
-    async def websocket_endpoint(websocket: WebSocket):
-        await manager.connect(websocket)
-        while True:
-            data = await websocket.receive_text()
-            await manager.broadcast(f"lox: {data}")
+                @app.websocket(f"/rooms/{manager}/")
+                async def websocket_endpoint(websocket: WebSocket):
+                    await manager.connect(websocket)
+                    while True:
+                        data = await websocket.receive_text()
+                        await manager.broadcast(f"lox: {data}")
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "Code": 400,
+            })
+    # return JSONResponse(
+    #     content={'Connected': True},
+    #     headers={
+    #         'Content-Type': 'application/json',
+    #         'Connection': 'keep-alive'
+    #     }
+    # )
