@@ -199,10 +199,3 @@ async def start_room(name: str, session: Optional[str] = Cookie(None)):
             detail={
                 "Code": 400,
             })
-    # return JSONResponse(
-    #     content={'Connected': True},
-    #     headers={
-    #         'Content-Type': 'application/json',
-    #         'Connection': 'keep-alive'
-    #     }
-    # )
