@@ -17,7 +17,6 @@
         var ws = null;
             function connect(event) {
                 event.preventDefault()
-                startRoom()
                 let url = window.location.pathname.slice(7, )
                 ws = new WebSocket(`ws://192.168.1.45:8000/rooms/${url}/`);
                 ws.onmessage = function(event) {
@@ -27,7 +26,6 @@
                     message.appendChild(content)
                     messages.appendChild(message)
                 };
-                event.preventDefault()
             }
             function sendMessage(event) {
                 var input = document.getElementById("messageText")

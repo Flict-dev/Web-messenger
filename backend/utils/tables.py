@@ -35,7 +35,8 @@ class Users(Base):
     id = Column(Integer, autoincrement=True)
     name = Column(String(100))
     admin = Column(Boolean)
-    messages = relationship("Messages", lazy='subquery', cascade="all, delete, delete-orphan",)
+    messages = relationship("Messages", lazy='subquery',
+                            cascade="all, delete, delete-orphan",)
     room_id = Column(Integer, ForeignKey('Rooms.id'))
     room = relationship("Rooms", back_populates="users")
     __table_args__ = (
@@ -49,10 +50,24 @@ class Rooms(Base):
     id = Column(Integer, autoincrement=True)
     name = Column(String(100), unique=True, nullable=False)
     password = Column(String, nullable=False)
-    users = relationship("Users", cascade="all, delete, delete-orphan", back_populates='room', lazy='subquery')
+    users = relationship("Users", cascade="all, delete, delete-orphan",
+                         back_populates='room', lazy='subquery')
 
     __table_args__ = (
         PrimaryKeyConstraint('id', name='room_pk'),
+    )
+
+
+class MsgKeys(Base):
+    __tablename__ = 'MsgKeys'
+
+    id = Column(Integer, autoincrement=True)
+    room_id = Column(Integer)
+    destinied_for = Column(String, nullable=False, unique=True)
+    key = Column(String, nullable=False)
+
+    __table_args__ = (
+        PrimaryKeyConstraint('id', name='pk'),
     )
 
 

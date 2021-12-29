@@ -2,6 +2,10 @@ from fastapi.testclient import TestClient
 from main import app, SECRET_KEY
 from utils.crypt import Decoder
 
+"""
+Tests should be rewrited
+"""
+
 client = TestClient(app)
 decoder = Decoder(SECRET_KEY)
 

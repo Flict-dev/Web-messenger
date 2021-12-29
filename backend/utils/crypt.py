@@ -1,6 +1,7 @@
 import re
 import jwt
 from passlib.context import CryptContext
+from cryptography.fernet import Fernet
 
 
 class Validate:
@@ -20,6 +21,12 @@ class Encoder:
         self.sessionKey = sessionKey
         self.sessionAlg = sessionAlg
 
+    @property
+    def key(self):
+        key = Fernet.generate_key()
+        print(key)
+        return str(key, encoding='utf-8')
+
     def gen_hash_link(self, name: str) -> str:
         return name.split('$')[-1]\
             .replace("/", 'slash')\
@@ -35,16 +42,22 @@ class Encoder:
             return self.context.hash(name)
         raise ValueError("name")
 
-    def encode_session(self, roomName: str, roomPassword: str, username: str) -> str:
+    def encode_session(self, roomName: str, roomPassword: str, username: str, msg_key: str) -> str:
         return jwt.encode(
             payload={
                 "name": roomName,
                 "password": roomPassword,
-                "username": username
+                "username": username,
+                "msg_key": msg_key
             },
             key=self.sessionKey,
             algorithm=self.sessionAlg
         )
+
+    def encrypt_message(self, message: str, msg_key: str) -> str:
+        encoded_msg = message.encode()
+        fernet = Fernet(msg_key)
+        return fernet.encrypt(encoded_msg)
 
 
 class Decoder:
@@ -68,3 +81,7 @@ class Decoder:
         return (
             room_name == name and self.verify_password(room_password, password)
         )
+
+    def dcrypt_message(self, encoded_msg: str, msg_key: str) -> str:
+        fernet = Fernet(msg_key)
+        return fernet.decrypt(encoded_msg)
