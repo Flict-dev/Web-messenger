@@ -226,9 +226,10 @@ async def create_msg_key(name: str, keyData: MsgKeysGet, session: Optional[str] 
             hashed_name = parser.parse_link_hash(name)
             room = database.get_room_by_name(hashed_name)
             encoded_data = jsonable_encoder(keyData)
-            if decoder.verify_admin_session(hashed_name, room.password, session):
+            if decoder.verify_session(hashed_name, room.password, session):
                 try:
                     data = database.get_msg_key(room.id, encoded_data['destinied_for'])
+                    database.delete_key(data.id)
                     return JSONResponse(
                         content={"Key": data.key},
                         status_code=status.HTTP_200_OK
