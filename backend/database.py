@@ -138,3 +138,39 @@ class Database:
                 return True
         except ValueError:
             return False
+
+    def check_msg_key(self, username: int):
+        keyTable = self.get_table('MsgKeys')
+        with self.session as session:
+            key = session.query(keyTable).where(
+                keyTable.destinied_for == username).all()
+            return len(key) > 1
+
+    def create_msg_key(self, room_id: int, destinied_for: str, key: str) -> bool:
+        keyTable = self.get_table('MsgKeys')
+        if not self.check_msg_key(destinied_for):
+            with self.session as session:
+                note = keyTable(
+                    room_id=room_id, destinied_for=destinied_for, key=key
+                )
+                session.add(note)
+                session.commit()
+        raise ValueError('Note already exists')
+
+    def get_msg_key(self, room_id: int, destinied_for: str) -> MsgKeys:
+        keyTable = self.get_table('MsgKeys')
+        try:
+            with self.session as session:
+                key = session.query(keyTable).where(
+                    keyTable.room_id == room_id and keyTable.destinied_for == destinied_for
+                ).all()
+                return key[0]
+        except IndexError:
+            raise ValueError("Key doesn't exist")
+
+    def delete_key(self, keyId: int):
+        keyTable = self.get_table('MsgKeys')
+        with self.session as session:
+            key = session.query(keyTable).where(keyTable.id == keyId).one()
+            session.delete(key)
+            session.commit()

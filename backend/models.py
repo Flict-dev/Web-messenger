@@ -11,6 +11,15 @@ class RoomAuth(BaseModel):
     password: str
 
 
+class MsgKeysCreate(BaseModel):
+    destinied_for: str
+    key: str
+
+
+class MsgKeysGet(BaseModel):
+    destinied_for: str
+
+
 class UserAuth(BaseModel):
     id: int
     accessToken: dict

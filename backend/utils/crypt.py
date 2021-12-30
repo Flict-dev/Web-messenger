@@ -75,6 +75,13 @@ class Decoder:
     def verify_name(self, name: str, hashed_name: str) -> bool:
         return self.context.verify(name, hashed_name)
 
+    def verify_admin_session(self, name: str, password: str, session: str) -> bool:
+        decoded_session = self.decode_session(session)
+        room_name, room_password = decoded_session['name'], decoded_session['password']
+        return (
+            room_name == name and self.verify_password(room_password, password) and int(decoded_session['admin'])
+        )
+
     def verify_session(self, name: str, password: str, session: str) -> bool:
         decoded_session = self.decode_session(session)
         room_name, room_password = decoded_session['name'], decoded_session['password']

@@ -18,7 +18,7 @@ from typing import Optional, List
 from utils.crypt import Encoder, Decoder
 from utils.helpers import Parser, Reader
 from sockmanager import RoomsManager, Room
-from models import RoomReq, RoomAuth
+from models import RoomReq, RoomAuth, MsgKeysCreate, MsgKeysGet
 from database import Database
 from secrets import token_hex
 
@@ -102,9 +102,9 @@ async def room_auth(name: str, session: Optional[str] = Cookie(None)):
         )
     except Exception as error:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
-                "Code": 400,
+                "Code": 500,
                 "error": error
             })
 
@@ -175,12 +175,84 @@ async def room(name: str, session: Optional[str] = Cookie(None)):
         )
     except Exception as error:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
-                "Code": 400,
+                "Code": 500,
                 "error": error
             })
 
+
+@app.post('/rooms/{name}/key')
+async def create_msg_key(name: str, keyData: MsgKeysCreate, session: Optional[str] = Cookie(None)):
+    try:
+        if session:
+            hashed_name = parser.parse_link_hash(name)
+            room = database.get_room_by_name(hashed_name)
+            encoded_data = jsonable_encoder(keyData)
+            if decoder.verify_admin_session(hashed_name, room.password, session):
+                try:
+                    database.create_msg_key(
+                        room.id, encoded_data['destinied_for'], encoded_data['key']
+                    )
+                    return JSONResponse(
+                        content={"Status": "Msg created"},
+                        status_code=status.HTTP_200_OK
+                    )
+                except ValueError as error:
+                    return JSONResponse(
+                        content={"error": error},
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+        return HTMLResponse(
+            templates['room_auth'],
+            status_code=status.HTTP_302_FOUND,
+            headers={
+                'Location': f'/rooms/{name}/auth',
+                'Connection': 'close'
+            }
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "Code": 500,
+                "error": error
+            })
+
+@app.delete('/rooms/{name}/key')
+async def create_msg_key(name: str, keyData: MsgKeysGet, session: Optional[str] = Cookie(None)):
+    try:
+        if session:
+            hashed_name = parser.parse_link_hash(name)
+            room = database.get_room_by_name(hashed_name)
+            encoded_data = jsonable_encoder(keyData)
+            if decoder.verify_admin_session(hashed_name, room.password, session):
+                try:
+                    data = database.get_msg_key(room.id, encoded_data['destinied_for'])
+                    return JSONResponse(
+                        content={"Key": data.key},
+                        status_code=status.HTTP_200_OK
+                    )
+                except ValueError as error:
+                    return JSONResponse(
+                        content={"error": error},
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+        return HTMLResponse(
+            templates['room_auth'],
+            status_code=status.HTTP_302_FOUND,
+            headers={
+                'Location': f'/rooms/{name}/auth',
+                'Connection': 'close'
+            }
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "Code": 500,
+                "error": error
+            })
 
 @app.websocket("/rooms/{name}/")
 async def websocket_endpoint(websocket: WebSocket, name: str, session: Optional[str] = Cookie(None)):
@@ -191,8 +263,7 @@ async def websocket_endpoint(websocket: WebSocket, name: str, session: Optional[
             manager.append_room(name, Room(name))
             manager.append_room_connection(name, websocket)
         room = await manager.connect_room(name, websocket)
-        hashed_name = parser.parse_link_hash(name)
-        user = database.get_room_by_name(hashed_name)
+        user = database.get_room_by_name(parser.parse_link_hash(name))
         username = decoder.decode_session(session)['username']
         msg_key = decoder.decode_session(session)['msg_key']
         try:
