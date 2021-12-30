@@ -28,7 +28,7 @@ class RoomsManager:
     def __init__(self) -> None:
         self.rooms = {}
 
-    def get_room_by_name(self, name: str):
+    def get_room_by_name(self, name: str) -> Room:
         return self.rooms[name]
 
     def append_room(self, name: str, room: Room) -> None:

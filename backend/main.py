@@ -22,8 +22,6 @@ from models import RoomReq, RoomAuth, MsgKeysCreate, MsgKeysGet
 from database import Database
 from secrets import token_hex
 
-from fastapi.responses import RedirectResponse
-
 # in prod use token_hex(32)
 SECRET_KEY = '9057e8f415a4ed8b2f01deaaad52baf7d30e59604939e3e4cce324444ec4acfb'
 URL = 'sqlite:///sqlite.db'
@@ -117,7 +115,7 @@ async def validate_room_password(name: str, auth: RoomAuth):
         room = database.get_room_by_name(hashed_name)
         password, username = json_data['password'], json_data['username']
         if decoder.verify_password(password, room.password):
-            if not database.check_user(username):
+            if not database.check_user(username, room.id):
                 database.create_user({
                     "name": username,
                     "admin": False,
@@ -189,7 +187,7 @@ async def create_msg_key(name: str, keyData: MsgKeysCreate, session: Optional[st
             hashed_name = parser.parse_link_hash(name)
             room = database.get_room_by_name(hashed_name)
             encoded_data = jsonable_encoder(keyData)
-            if decoder.verify_admin_session(hashed_name, room.password, session):
+            if decoder.verify_session(hashed_name, room.password, session, True):
                 try:
                     database.create_msg_key(
                         room.id, encoded_data['destinied_for'], encoded_data['key']
@@ -219,8 +217,9 @@ async def create_msg_key(name: str, keyData: MsgKeysCreate, session: Optional[st
                 "error": error
             })
 
+
 @app.delete('/rooms/{name}/key')
-async def create_msg_key(name: str, keyData: MsgKeysGet, session: Optional[str] = Cookie(None)):
+async def delete_msg_key(name: str, keyData: MsgKeysGet, session: Optional[str] = Cookie(None)):
     try:
         if session:
             hashed_name = parser.parse_link_hash(name)
@@ -228,7 +227,9 @@ async def create_msg_key(name: str, keyData: MsgKeysGet, session: Optional[str] 
             encoded_data = jsonable_encoder(keyData)
             if decoder.verify_session(hashed_name, room.password, session):
                 try:
-                    data = database.get_msg_key(room.id, encoded_data['destinied_for'])
+                    data = database.get_msg_key(
+                        room.id, encoded_data['destinied_for']
+                    )
                     database.delete_key(data.id)
                     return JSONResponse(
                         content={"Key": data.key},
@@ -255,6 +256,7 @@ async def create_msg_key(name: str, keyData: MsgKeysGet, session: Optional[str] 
                 "error": error
             })
 
+
 @app.websocket("/rooms/{name}/")
 async def websocket_endpoint(websocket: WebSocket, name: str, session: Optional[str] = Cookie(None)):
     if session:
@@ -265,16 +267,16 @@ async def websocket_endpoint(websocket: WebSocket, name: str, session: Optional[
             manager.append_room_connection(name, websocket)
         room = await manager.connect_room(name, websocket)
         user = database.get_room_by_name(parser.parse_link_hash(name))
-        username = decoder.decode_session(session)['username']
-        msg_key = decoder.decode_session(session)['msg_key']
+        decoded_session = decoder.decode_session(session)
+        username = decoded_session['username']
         try:
             while True:
                 data = await websocket.receive_text()
                 try:
                     if database.create_message(
-                        encoder.encrypt_message(data, str(msg_key).encode()),
-                        user.id
-                    ):
+                        encoder.encrypt_message(
+                            data, str(decoded_session['msg_key']).encode()
+                        ),user.id):
                         await room.broadcast(f"{username} says: {data}")
                 except ValueError:
                     await room.broadcast(f"{username} havent encryption keys")

@@ -1,6 +1,5 @@
 from fastapi.encoders import jsonable_encoder
 
-
 class Reader:
     def __init__(self, filename: str):
         self.filename = filename

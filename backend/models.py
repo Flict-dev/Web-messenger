@@ -18,8 +18,3 @@ class MsgKeysCreate(BaseModel):
 
 class MsgKeysGet(BaseModel):
     destinied_for: str
-
-
-class UserAuth(BaseModel):
-    id: int
-    accessToken: dict

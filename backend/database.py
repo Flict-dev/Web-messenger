@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from utils.tables import Rooms, Users, Messages, MsgKeys
 
 
-class Database:
+class DtabaseHelper:
     def __init__(self, path: str, echo: bool = False) -> None:
         self._engine = create_engine(path, echo=echo)
         self._metadata = MetaData()
@@ -28,6 +28,26 @@ class Database:
             'MsgKeys': MsgKeys
         }
         return tables[tableName]
+
+    def check_user(self, username: str, room_id: int) -> bool:
+        usersTable = self.get_table('Users')
+        with self.session as session:
+            user = session.query(usersTable).where(
+                usersTable.name == username and usersTable.room_id == room_id
+            ).all()
+            return len(user) > 0
+
+    def check_msg_key(self, username: int):
+        keyTable = self.get_table('MsgKeys')
+        with self.session as session:
+            key = session.query(keyTable).where(
+                keyTable.destinied_for == username).all()
+            return len(key) > 1
+
+
+class DatabaseGet(DtabaseHelper):
+    def __init__(self, path: str, echo: bool = False) -> None:
+        super().__init__(path, echo)
 
     def get_room_by_id(self, id: int) -> list:
         roomTable = self.get_table('Rooms')
@@ -87,13 +107,21 @@ class Database:
             )
         return users
 
-    def check_user(self, username: str) -> bool:
-        usersTable = self.get_table('Users')
-        with self.session as session:
-            user = session.query(usersTable).where(
-                usersTable.name == username
-            ).all()
-            return len(user) > 0
+    def get_msg_key(self, room_id: int, destinied_for: str) -> MsgKeys:
+        keyTable = self.get_table('MsgKeys')
+        try:
+            with self.session as session:
+                key = session.query(keyTable).where(
+                    keyTable.room_id == room_id and keyTable.destinied_for == destinied_for
+                ).all()
+                return key[0]
+        except IndexError:
+            raise ValueError("Key doesn't exist")
+
+
+class Database(DatabaseGet):
+    def __init__(self, path: str, echo: bool = False) -> None:
+        super().__init__(path, echo)
 
     def create_room(self, data: Dict) -> bool:
         roomTable = self.get_table('Rooms')
@@ -139,13 +167,6 @@ class Database:
         except ValueError:
             return False
 
-    def check_msg_key(self, username: int):
-        keyTable = self.get_table('MsgKeys')
-        with self.session as session:
-            key = session.query(keyTable).where(
-                keyTable.destinied_for == username).all()
-            return len(key) > 1
-
     def create_msg_key(self, room_id: int, destinied_for: str, key: str) -> bool:
         keyTable = self.get_table('MsgKeys')
         if not self.check_msg_key(destinied_for):
@@ -156,17 +177,6 @@ class Database:
                 session.add(note)
                 session.commit()
         raise ValueError('Note already exists')
-
-    def get_msg_key(self, room_id: int, destinied_for: str) -> MsgKeys:
-        keyTable = self.get_table('MsgKeys')
-        try:
-            with self.session as session:
-                key = session.query(keyTable).where(
-                    keyTable.room_id == room_id and keyTable.destinied_for == destinied_for
-                ).all()
-                return key[0]
-        except IndexError:
-            raise ValueError("Key doesn't exist")
 
     def delete_key(self, keyId: int):
         keyTable = self.get_table('MsgKeys')
