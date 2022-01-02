@@ -18,3 +18,7 @@ class MsgKeysCreate(BaseModel):
 
 class MsgKeysGet(BaseModel):
     destinied_for: str
+
+
+class UserBlock(BaseModel):
+    username: str

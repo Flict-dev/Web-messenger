@@ -39,6 +39,7 @@ class Users(Base):
                             cascade="all, delete, delete-orphan",)
     room_id = Column(Integer, ForeignKey('Rooms.id'))
     room = relationship("Rooms", back_populates="users")
+    status = Column(Boolean, default=True)
     __table_args__ = (
         PrimaryKeyConstraint('id', name='user_pk'),
     )

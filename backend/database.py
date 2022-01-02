@@ -3,6 +3,8 @@ from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
 from utils.tables import Rooms, Users, Messages, MsgKeys
+from utils.crypt import Decoder
+from main import SECRET_KEY
 
 
 class DtabaseHelper:
@@ -11,6 +13,7 @@ class DtabaseHelper:
         self._metadata = MetaData()
         self._metadata.reflect(self._engine)
         self._session = sessionmaker(bind=self._engine)
+        self._decoder = Decoder(SECRET_KEY)
 
     @property
     def tables(self) -> list:
@@ -82,30 +85,16 @@ class DatabaseGet(DtabaseHelper):
         except IndexError:
             raise ValueError("User doesn't exist")
 
-    def get_user_by_name(self, name: str) -> Users:
-        usersTable = self.get_table('Users')
-        try:
-            with self.session as session:
-                user = session.query(usersTable).where(
-                    usersTable.name == name
-                ).all()
-                return user[0]
-        except IndexError:
-            raise ValueError("User doesn't exist")
+    def get_user_by_name(self, username: str, room_id: int) -> Users:
+        room = self.get_room_by_id(room_id)
+        for user in room.users:
+            if self._decoder.verify_name(username, user.name):
+                return user
+        raise ValueError("User doesn't exist")
 
     def get_room_users(self, room_id: int) -> list:
         room = self.get_room_by_id(room_id)
-        users = []
-        for user in room.users:
-            users.append(
-                {
-                    "id": user.id,
-                    "name": user.name,
-                    "admin": user.admin,
-                    "messages": user.messages
-                }
-            )
-        return users
+        return room.users
 
     def get_msg_key(self, room_id: int, destinied_for: str) -> MsgKeys:
         keyTable = self.get_table('MsgKeys')
@@ -117,6 +106,15 @@ class DatabaseGet(DtabaseHelper):
                 return key[0]
         except IndexError:
             raise ValueError("Key doesn't exist")
+
+    def get_all_messages(self, room_id: int):
+        users = self.get_room_users(room_id)
+        messages = []
+        for user in users:
+            for msg in user.messages:
+                messages.append(msg)
+        messages.sort(key=lambda msg: msg.created_at)
+        return messages
 
 
 class Database(DatabaseGet):
@@ -184,3 +182,20 @@ class Database(DatabaseGet):
             key = session.query(keyTable).where(keyTable.id == keyId).one()
             session.delete(key)
             session.commit()
+
+    def delete_room(self, room_id: int):
+        with self.session as session:
+            room = self.get_room_by_id(room_id)
+            session.delete(room)
+            session.commit()
+
+    def block_user(self, username: str, room_id: int):
+        with self.session as session:
+           user = self.get_user_by_name(username, room_id)
+           user.status = False
+           session.add(user)
+           session.commit()
+
+
+d = Database('sqlite:///sqlite.db')
+d.get_all_messages(1)

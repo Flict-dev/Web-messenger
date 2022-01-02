@@ -65,6 +65,7 @@ class Decoder:
         self.context = CryptContext(schemes=['bcrypt'])
         self.sessionKey = sessionKey
         self.sessionAlg = sessionAlg
+        self.encoder = Encoder(sessionKey)
 
     def decode_session(self, session: str) -> dict:
         return dict(jwt.decode(session, key=self.sessionKey, algorithms=self.sessionAlg))
@@ -88,6 +89,15 @@ class Decoder:
             room_name == name and self.verify_password(
                 room_password, password
             )
+        )
+
+    def session_add_key(self, session: str, msg_key: str) -> str:
+        decoded_session = self.decode_session(session)
+        return self.encoder.encode_session(
+            decoded_session['name'], 
+            decoded_session['password'],
+            decoded_session['username'],
+            msg_key
         )
 
     def dcrypt_message(self, encoded_msg: str, msg_key: str) -> str:
