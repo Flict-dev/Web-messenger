@@ -83,7 +83,7 @@ class Decoder:
             return (
                 room_name == name and self.verify_password(
                     room_password, password
-                ) and int(decoded_session['admin'])
+                ) and decoded_session['username'] == 'Admin'
             )
         return (
             room_name == name and self.verify_password(

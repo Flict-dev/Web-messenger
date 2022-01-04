@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
 from utils.tables import Rooms, Users, Messages, MsgKeys
 from utils.crypt import Decoder
-from main import SECRET_KEY
+from conf import SECRET_KEY
 
 
 class DtabaseHelper:
@@ -36,7 +36,7 @@ class DtabaseHelper:
         usersTable = self.get_table('Users')
         with self.session as session:
             user = session.query(usersTable).where(
-                usersTable.name == username and usersTable.room_id == room_id
+                usersTable.name == username, usersTable.room_id == room_id
             ).all()
             return len(user) > 0
 
@@ -45,7 +45,7 @@ class DtabaseHelper:
         with self.session as session:
             key = session.query(keyTable).where(
                 keyTable.destinied_for == username).all()
-            return len(key) > 1
+            return len(key) > 0
 
 
 class DatabaseGet(DtabaseHelper):
@@ -87,10 +87,9 @@ class DatabaseGet(DtabaseHelper):
 
     def get_user_by_name(self, username: str, room_id: int) -> Users:
         room = self.get_room_by_id(room_id)
-        for user in room.users:
-            if self._decoder.verify_name(username, user.name):
-                return user
-        raise ValueError("User doesn't exist")
+        names = list(map(lambda x: x.name, room.users))
+        ind = names.index(username)
+        return room.users[ind]
 
     def get_room_users(self, room_id: int) -> list:
         room = self.get_room_by_id(room_id)
@@ -174,7 +173,8 @@ class Database(DatabaseGet):
                 )
                 session.add(note)
                 session.commit()
-        raise ValueError('Note already exists')
+        else:
+            raise ValueError('Note already exists')
 
     def delete_key(self, keyId: int):
         keyTable = self.get_table('MsgKeys')
@@ -191,11 +191,7 @@ class Database(DatabaseGet):
 
     def block_user(self, username: str, room_id: int):
         with self.session as session:
-           user = self.get_user_by_name(username, room_id)
-           user.status = False
-           session.add(user)
-           session.commit()
-
-
-d = Database('sqlite:///sqlite.db')
-d.get_all_messages(1)
+            user = self.get_user_by_name(username, room_id)
+            user.status = False
+            session.add(user)
+            session.commit()
