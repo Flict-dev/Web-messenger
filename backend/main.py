@@ -18,7 +18,7 @@ from typing import Optional, List
 from utils.crypt import Encoder, Decoder
 from utils.helpers import Parser, Reader
 from sockmanager import RoomsManager, Room
-from models import RoomReq, RoomAuth, MsgKeysCreate, UserBlock
+from shema import RoomReq, RoomAuth, MsgKeysCreate, UserBlock
 from database import Database
 from secrets import token_hex
 from conf import DBURL, SECRET_KEY
