@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+    </head>
+    <body>
+        <h1>WebSocket Chat</h1>
+        <form action="" class="room-form">
+            <div class="start">
+                <label>Start Room: <input type="text" id="startN" autocomplete="off"/> <input type="text" id="startP" autocomplete="off"/></label>
+                <button >Start</button>
+            </div>
+        </form>
+        <ul id='messages'>
+        </ul>
+        <script>
+        var ws = null;
+            function connect(event) {
+                var room = document.getElementById("room")
+                ws = new WebSocket("ws://192.168.1.45:8000/rooms/" + room.value);
+                console.log(room.value)
+                ws.onmessage = function(event) {
+                    var messages = document.getElementById('messages')
+                    var message = document.createElement('li')
+                    var content = document.createTextNode(event.data)
+                    message.appendChild(content)
+                    messages.appendChild(message)
+                };
+                event.preventDefault()
+            }
+            function sendMessage(event) {
+                var input = document.getElementById("messageText")
+                ws.send(input.value)
+                input.value = ''
+                event.preventDefault()
+            }
+            let form = document.querySelector(".room-form");
+            form.addEventListener("submit", (event) => {
+                event.preventDefault();
+                startRoom();
+            })
+
+            async function startRoom(){
+                let startRoomN = document.getElementById("startN");
+                let startRoomP = document.getElementById("startP");
+                await fetch('http://192.168.1.45:8000/', {
+                    method: "POST", 
+                    headers: {
+                        'Content-Type': 'application/json;charset=utf-8'
+                    },
+                    body: JSON.stringify({
+                        "name": startRoomN.value,
+                        "password": startRoomP.value
+                    })
+                })
+                .then(res => res)
+                .then(data => {console.log(data)})
+            }
+        </script>
+    </body>
+</html>

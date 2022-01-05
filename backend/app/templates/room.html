@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+    </head>
+    <body>
+        <h1>WebSocket Chat</h1>
+        <form action="" onsubmit="sendMessage(event)">
+            <label>Message: <input type="text" id="messageText" autocomplete="off"/></label>
+            <button onclick="connect(event)">Connect</button>
+            <button>Send</button>
+        </form>
+        <hr>
+        <ul id='messages'>
+        </ul>
+        <script>
+        var ws = null;
+            function connect(event) {
+                event.preventDefault()
+                let url = window.location.pathname.slice(7, )
+                ws = new WebSocket(`ws://192.168.1.45:8000/rooms/${url}/`);
+                ws.onmessage = function(event) {
+                    var messages = document.getElementById('messages')
+                    var message = document.createElement('li')
+                    var content = document.createTextNode(event.data)
+                    message.appendChild(content)
+                    messages.appendChild(message)
+                };
+            }
+            function sendMessage(event) {
+                var input = document.getElementById("messageText")
+                ws.send(input.value)
+                input.value = ''
+                event.preventDefault()
+            }
+            async function startRoom(){
+                let startRoomN = document.getElementById("startN");
+                let startRoomP = document.getElementById("startP");
+                let url = window.location.pathname.slice(7,)
+                await fetch(`http://192.168.1.45:8000/rooms/${url}`, {
+                    method: "POST", 
+                    headers: {
+                        'Content-Type': 'application/json;charset=utf-8'
+                    },
+                    body: JSON.stringify({
+                        "run": true,
+                    })
+                })
+                .then(res => res)
+                .then(data => {console.log(data)})
+            }
+        </script>
+    </body>
+</html>
