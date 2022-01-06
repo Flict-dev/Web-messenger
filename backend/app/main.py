@@ -1,10 +1,8 @@
-from fastapi import (
-    FastAPI,
-)
+from fastapi import FastAPI
 from api.api_v1.api import apirouter
 from core.config import settings
 from fastapi.openapi.utils import get_openapi
-
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -12,6 +10,10 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
+origins = [
+    "http://localhost:3000",
+    "http://localhost"
+]
 
 def messenger_openapi():
     if app.openapi_schema:
@@ -28,6 +30,13 @@ def messenger_openapi():
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins = origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.openapi = messenger_openapi
 app.include_router(apirouter, prefix=settings.API_V1_STR)

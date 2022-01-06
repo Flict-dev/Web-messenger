@@ -2,6 +2,7 @@ from fastapi import (
     APIRouter,
     HTTPException,
     status,
+    Request
 )
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse
@@ -19,40 +20,44 @@ templates = {
     'room_auth': Reader('room_auth.html').read_html(),
 }
 
-
 @router.get('/')
-async def home():
-    return HTMLResponse(templates['index'], status_code=status.HTTP_200_OK)
+async def home(request: Request):
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={'ip': f'{request.client.host}'},
+    )
 
 
 @router.post('/')
 async def create_room(room: RoomReq):
-    try:
         plainName, plainPassword = parser.parse_room_data(room)
         hashed_name = encoder.hash_name(plainName)
+        hashed_password = encoder.hash_password(plainPassword)
         link = encoder.gen_hash_link(hashed_name)
-        database.create_room(
-            {
-                'name': hashed_name,
-                'password': encoder.hash_password(plainPassword)
-            }
-        )
-        sessionCookie = encoder.encode_session(
-            hashed_name, plainPassword, 'Admin', encoder.key
-        )
+        if hashed_password:
+            database.create_room(
+                {
+                    'name': hashed_name,
+                    'password': hashed_password
+                }
+            )
+            sessionCookie = encoder.encode_session(
+                hashed_name, plainPassword, 'Admin', encoder.key
+            )
+            return JSONResponse(
+                status_code=status.HTTP_201_CREATED,
+                content={'link': f'/rooms/{link}'},
+                headers={
+                    'Content-Type': 'application/json',
+                    'Set-Cookie': f'session={sessionCookie}',
+                }
+            )
         return JSONResponse(
-            status_code=status.HTTP_302_FOUND,
-            content={'link': f'/rooms/{link}'},
-            headers={
-                'Content-Type': 'application/json',
-                'Set-Cookie': f'session={sessionCookie}',
-                'Location': f'/rooms/{link}/auth'
-            }
-        )
-    except ValueError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                'Code': 400,
-                'error': error
-            })
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    'error': 'Eliot hates when the password is too simple'
+                },
+                headers={
+                    'Content-Type': 'application/json',
+                }
+            )

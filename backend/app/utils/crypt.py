@@ -35,7 +35,7 @@ class Encoder:
     def hash_password(self, password: str) -> str:
         if self.validate.password(password):
             return self.context.hash(password)
-        raise ValueError("password")
+        return False
 
     def hash_name(self, name: str) -> str:
         if name:
