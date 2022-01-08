@@ -1,35 +1,17 @@
-import React, { useState, useEffect } from "react";
-import CreateForm from "./components/CreateForm";
+import React from "react";
+import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
+import Home from "./components/Home";
+import Room from "./components/Room";
 
 const App = () => {
-  const [ip, setIP] = useState("");
-
-  const getIP = async () => {
-    const requestOptions = {
-      'method': 'GET',
-      'headers': {
-        'Content-type': 'application/json'
-      },
-    };
-    await fetch('/v1/', requestOptions)
-      .then(response => {
-        if (response.ok){
-          return response.json();
-        }else{
-          console.error('Error!')
-        };
-      }).then(data => {setIP(data.ip);});
-  };
-
-  useEffect(() => {
-    getIP();
-  }, [])
-
   return (
-    <div className="App">
-      <h1>Hello friend from {ip}</h1>
-      <CreateForm/>
-    </div>
+    <BrowserRouter>
+       <Routes>
+          <Route path='/' element={<Home/>} />
+          <Route path='/rooms/:rooms_slug' element={<Room/>} />
+          <Route path='/rooms/:rooms_slug/auth' element={<Home/>} />
+       </Routes>
+    </BrowserRouter>
   );
 }
 

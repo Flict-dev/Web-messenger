@@ -24,7 +24,6 @@ class Encoder:
     @property
     def key(self):
         key = Fernet.generate_key()
-        print(key)
         return str(key, encoding="utf-8")
 
     def gen_hash_link(self, name: str) -> str:

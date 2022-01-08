@@ -5,15 +5,14 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.PROJECT_VERSION,
-    debug=settings.DEBUG
+    title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION, debug=settings.DEBUG
 )
 
 origins = [
     "http://localhost:3000",
-    "http://localhost"
+    "http://localhost",
 ]
+
 
 def messenger_openapi():
     if app.openapi_schema:
@@ -30,9 +29,10 @@ def messenger_openapi():
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = origins,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

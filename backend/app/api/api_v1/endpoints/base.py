@@ -30,7 +30,7 @@ async def create_room(room: RoomReq):
             content={"link": f"/rooms/{link}"},
             headers={
                 "Content-Type": "application/json",
-                "Set-Cookie": f"session={sessionCookie}",
+                "Cookie": f"session={sessionCookie}",
             },
         )
     return JSONResponse(

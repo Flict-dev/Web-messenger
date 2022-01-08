@@ -1,24 +1,47 @@
 from fastapi import WebSocket
 from typing import List
+from datetime import datetime
+
+from sqlalchemy.sql.functions import user
+from utils.helpers import Parser
+
+
+class Connection:
+    def __init__(self, name: str, websocket: WebSocket) -> None:
+        self.name = name
+        self.websocket = websocket
 
 
 class Room:
     def __init__(self, name: str) -> None:
         self.name = name
-        self.connections: List[WebSocket] = []
+        self.connections: List[Connection] = []
+        self._parser = Parser()
 
     def __str__(self):
         return self.name
 
-    async def connect(self, websocket: WebSocket) -> None:
-        await websocket.accept()
+    async def connect(self, username: str, websocket: WebSocket) -> None:
+        connection = Connection(username, websocket)
+        await connection.websocket.accept()
+        self.connections.append(connection)
 
-    async def broadcast(self, message: str) -> None:
+
+    async def broadcast(
+        self, status: int = 200, message: str = "", username: str = ""
+    ) -> None:
+        data = {
+            "status": status,
+            "username": username,
+            "message": message,
+            "time": self._parser.parse_msg_time(str(datetime.now())),
+        }
         for connection in self.connections:
-            await connection.send_text(message)
+            await connection.websocket.send_json(data)
 
-    def disconnect(self, websocket: WebSocket):
-        self.connections.remove(websocket)
+    async def disconnect(self, connection: Connection):
+        name = connection.name
+        self.connections.remove(connection)
 
     def give_status(self) -> bool:
         return len(self.connections) > 0
@@ -37,13 +60,15 @@ class RoomsManager:
     def check_room(self, name: str) -> bool:
         return name in self.rooms.keys()
 
-    def append_room_connection(self, name: str, websocket: WebSocket):
+    def append_room_connection(self, name: str, connection: Connection) -> None:
         room = self.rooms[name]
-        room.connections.append(websocket)
+        room.connections.append(connection)
 
-    async def connect_room(self, name: str, websocket: WebSocket) -> Room:
+    async def connect_room(
+        self, name: str, username: str, websocket: WebSocket
+    ) -> Room:
         room = self.rooms[name]
-        await room.connect(websocket)
+        await room.connect(username, websocket)
         return room
 
     def close_room(self, name: str) -> None:

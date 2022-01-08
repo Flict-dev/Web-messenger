@@ -5,11 +5,12 @@ from fastapi import (
     HTTPException,
     status,
     Cookie,
+    Query,
 )
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from typing import Optional
-from api.wsmanager import Room
+from api.wsmanager import Room, Connection
 from shemas.room import RoomAuth
 from shemas.user import UserBlock
 from shemas.msg_key import MsgKeysCreate
@@ -36,7 +37,7 @@ async def room_session_auth(name: str, session: Optional[str] = Cookie(None)):
                     content={"Auth": True},
                     headers={
                         "Content-Type": "application/json",
-                        "Location": f"/rooms/{name}",
+                        "Location": f"api/v1/rooms/{name}",
                     },
                 )
         return JSONResponse(
@@ -115,6 +116,7 @@ async def room(name: str, session: Optional[str] = Cookie(None)):
                                 message.data, decoded_session["msg_key"]
                             ),
                             "Created_at": parser.parse_msg_time(message.created_at),
+                            "Status": user.status,
                         }
                     return JSONResponse(
                         status_code=status.HTTP_200_OK,
@@ -122,6 +124,7 @@ async def room(name: str, session: Optional[str] = Cookie(None)):
                             "Status": 200,
                             "User": decoded_session["username"],
                             "Messages": messages,
+                            "Users": list(map(lambda user: user.name, room.users)),
                         },
                         headers={
                             "Content-Type": "application/json",
@@ -287,7 +290,7 @@ async def delete_msg_key(name: str, session: Optional[str] = Cookie(None)):
 
 @router.websocket("/{name}")
 async def websocket_endpoint(
-    websocket: WebSocket, name: str, session: Optional[str] = Cookie(None)
+    websocket: WebSocket, name: str, session: Optional[str] = Query(None)
 ):
     if session:
         decoded_session = decoder.decode_session(session)
@@ -300,14 +303,18 @@ async def websocket_endpoint(
             and user.status
         ):
             if manager.check_room(name):
-                manager.append_room_connection(name, websocket)
+                connection = Connection(username, websocket)
+                manager.append_room_connection(name, connection)
             else:
                 manager.append_room(name, Room(name))
-                manager.append_room_connection(name, websocket)
-            room = await manager.connect_room(name, websocket)
+                connection = Connection(username, websocket)
+                manager.append_room_connection(name, connection)
+            room = await manager.connect_room(name, username, websocket)
+            await room.broadcast(201, f"{connection.name} joined chat", connection.name)
             try:
                 while True:
-                    data = await websocket.receive_text()
+                    data = await websocket.receive_json()
+                    data = dict(data)
                     try:
                         if database.create_message(
                             encoder.encrypt_message(
@@ -315,10 +322,18 @@ async def websocket_endpoint(
                             ),
                             user.id,
                         ):
-                            await room.broadcast(f"{username} says: {data}")
+                            await room.broadcast(200, data["message"], username)
                     except ValueError:
-                        await room.broadcast(f"{username} havent encryption keys")
+                        await room.broadcast(
+                            204, f"{username} havent encryption keys", username
+                        )
             except WebSocketDisconnect:
-                room.disconnect(websocket)
-                await room.broadcast(f"{username} left the chat")
+                room.disconnect(connection)
+                await room.broadcast(202, f"{name} left chat", connection.name)
                 manager.close_room(name)
+
+
+# @router.websocket("/{name}")
+# async def websocket_endpoint(
+#     websocket: WebSocket, name: str, session: Optional[str] = Cookie(None)
+# ):
