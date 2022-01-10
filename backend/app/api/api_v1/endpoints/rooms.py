@@ -108,35 +108,20 @@ async def room(name: str, session: Optional[str] = Cookie(None)):
                 and user.status
             ):
                 encoded_messages, messages = database.get_all_messages(room.id), {}
-                if decoded_session["msg_key"]:
-                    for message in encoded_messages:
-                        user = database.get_user_by_id(message.user_id)
-                        messages[user.name] = {
-                            "Message": decoder.dcrypt_message(
-                                message.data, decoded_session["msg_key"]
-                            ),
-                            "Created_at": parser.parse_msg_time(message.created_at),
-                            "Status": user.status,
-                        }
-                    return JSONResponse(
-                        status_code=status.HTTP_200_OK,
-                        content={
-                            "Status": 200,
-                            "User": decoded_session["username"],
-                            "Messages": messages,
-                            "Users": list(map(lambda user: user.name, room.users)),
-                        },
-                        headers={
-                            "Content-Type": "application/json",
-                            "Connection": "keep-alive",
-                        },
-                    )
+                for message in encoded_messages:
+                    user = database.get_user_by_id(message.user_id)
+                    messages[user.name] = {
+                        "Message": message.data,
+                        "Created_at": parser.parse_msg_time(message.created_at),
+                        "Status": user.status,
+                    }
                 return JSONResponse(
                     status_code=status.HTTP_200_OK,
                     content={
-                        "Status": 201,
+                        "Status": 200,
                         "User": decoded_session["username"],
-                        "Messages": "User doesn't have an encryption key",
+                        "Messages": messages,
+                        "Users": list(map(lambda user: user.name, room.users)),
                     },
                     headers={
                         "Content-Type": "application/json",
@@ -309,31 +294,20 @@ async def websocket_endpoint(
                 manager.append_room(name, Room(name))
                 connection = Connection(username, websocket)
                 manager.append_room_connection(name, connection)
-            room = await manager.connect_room(name, username, websocket)
-            await room.broadcast(201, f"{connection.name} joined chat", connection.name)
+            room = await manager.connect_room(name, connection)
             try:
                 while True:
                     data = await websocket.receive_json()
                     data = dict(data)
                     try:
-                        if database.create_message(
-                            encoder.encrypt_message(
-                                data, str(decoded_session["msg_key"]).encode()
-                            ),
-                            user.id,
-                        ):
+                        if database.create_message(data, user.id):
                             await room.broadcast(200, data["message"], username)
                     except ValueError:
                         await room.broadcast(
                             204, f"{username} havent encryption keys", username
                         )
             except WebSocketDisconnect:
-                room.disconnect(connection)
-                await room.broadcast(202, f"{name} left chat", connection.name)
+                await room.disconnect(connection)
                 manager.close_room(name)
-
-
-# @router.websocket("/{name}")
-# async def websocket_endpoint(
-#     websocket: WebSocket, name: str, session: Optional[str] = Cookie(None)
-# ):
+                await room.broadcast(202, f"{username} left chat", username)
+                

@@ -21,11 +21,11 @@ class Room:
     def __str__(self):
         return self.name
 
-    async def connect(self, username: str, websocket: WebSocket) -> None:
-        connection = Connection(username, websocket)
+    async def connect(self, connection: Connection) -> None:
         await connection.websocket.accept()
-        self.connections.append(connection)
-
+        await self.send_connections(connection)
+        await self.broadcast(201, f"{connection.name} joined chat", connection.name)
+        
 
     async def broadcast(
         self, status: int = 200, message: str = "", username: str = ""
@@ -39,9 +39,14 @@ class Room:
         for connection in self.connections:
             await connection.websocket.send_json(data)
 
-    async def disconnect(self, connection: Connection):
-        name = connection.name
+    async def disconnect(self, connection: Connection):  
         self.connections.remove(connection)
+
+
+    async def send_connections(self, connection: Connection) -> None:
+        named_connections = list(map(lambda x: x.name, self.connections))
+        data = {"status": 203, "connections": named_connections}
+        await connection.websocket.send_json(data)
 
     def give_status(self) -> bool:
         return len(self.connections) > 0
@@ -64,11 +69,9 @@ class RoomsManager:
         room = self.rooms[name]
         room.connections.append(connection)
 
-    async def connect_room(
-        self, name: str, username: str, websocket: WebSocket
-    ) -> Room:
+    async def connect_room(self, name: str, connection:Connection) -> Room:
         room = self.rooms[name]
-        await room.connect(username, websocket)
+        await room.connect(connection)
         return room
 
     def close_room(self, name: str) -> None:

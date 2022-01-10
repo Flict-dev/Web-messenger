@@ -1,35 +1,35 @@
 import React, {useState, useEffect} from 'react';
 import RoomUsers from './RoomUsers';
+import jwt_decode from "jwt-decode";
+import {startRoom} from './utils/wsclient';
+import {getCookie} from './utils/helpers';
+
 const Room = () => {
     // let [users, setUser] = useState([])
     const url = document.location.pathname
 
-    const getCookie = (name) => {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-          let c = cookies[i].trim().split('=');
-          if (c[0] === name) {
-              return c[1];
-          }
-      }
-      return "";
-    } 
+    const initialRequest = async () => {
+      const requestOptions = {
+        'method': 'GET',
+        'headers': {
+          'Content-Type': 'application/json'
+        },
+      }; 
+      const roomData = fetch(`/v1${url}`, requestOptions).then((response) => {
+        if (response.ok){
+          return response.json()
+        }else{
+          console.error()
+        }
+      })
+    };
+    
+    
 
     useEffect(() => {
-      const ws = new WebSocket(
-        `ws://192.168.1.45:8000/api/v1${url}?session=${getCookie('session')}`
-      );
-      ws.onopen = (e) => {
-        console.log(e);
-      };
-      ws.onclose = () => console.log('ws closed');
-      ws.onmessage = e => {
-        const message = JSON.parse(e.data);
-        console.log('e', message);
-      };
-  
+      startRoom(url, getCookie('session'))
     }, [])
-
+    let users = {"John": {"name": "John", "status": true, "id": 1}, "Alice": {"name": "Alice", "status": true, "id": 2}}
     return (
       <div className="container">
         <div className="admin_container"></div>
@@ -41,7 +41,7 @@ const Room = () => {
           </div>
         </div>
         <div className="users_container">
-          <RoomUsers/>
+          <RoomUsers props={users}/>
         </div>
       </div>
     )
