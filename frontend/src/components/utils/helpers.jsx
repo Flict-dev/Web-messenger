@@ -11,4 +11,4 @@ const getCookie = (name) => {
   return "";
 } 
 
-export { getCookie }
+export { getCookie };

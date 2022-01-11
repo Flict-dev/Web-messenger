@@ -14,4 +14,4 @@ const startRoom = (url, session) => {
   };
 };
 
-export { startRoom }
+export { startRoom };

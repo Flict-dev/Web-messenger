@@ -15,7 +15,6 @@ from shemas.room import RoomAuth
 from shemas.user import UserBlock
 from shemas.msg_key import MsgKeysCreate
 from core.utils import manager, parser, encoder, decoder, database
-
 router = APIRouter()
 
 
@@ -287,27 +286,20 @@ async def websocket_endpoint(
             decoder.verify_session(hashed_name, room_obj.password, session)
             and user.status
         ):
-            if manager.check_room(name):
-                connection = Connection(username, websocket)
-                manager.append_room_connection(name, connection)
-            else:
-                manager.append_room(name, Room(name))
-                connection = Connection(username, websocket)
-                manager.append_room_connection(name, connection)
-            room = await manager.connect_room(name, connection)
+            manager.append_room(name, Room(name))
+            connection = Connection(username, websocket)
             try:
-                while True:
-                    data = await websocket.receive_json()
-                    data = dict(data)
-                    try:
+                manager.append_room_connection(name, connection)
+                room = await manager.connect_room(name, connection)
+                try:
+                    while True:
+                        data = await websocket.receive_json()
                         if database.create_message(data, user.id):
                             await room.broadcast(200, data["message"], username)
-                    except ValueError:
-                        await room.broadcast(
-                            204, f"{username} havent encryption keys", username
-                        )
-            except WebSocketDisconnect:
-                await room.disconnect(connection)
-                manager.close_room(name)
-                await room.broadcast(202, f"{username} left chat", username)
+                except WebSocketDisconnect:
+                    await room.disconnect(connection)
+                    manager.close_room(name)
+                    await room.broadcast(202, f"{username} left chat", username)
+            except RuntimeError:
+                manager.delete_connections(name)
                 
