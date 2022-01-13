@@ -1,6 +1,4 @@
-import React from 'react';
-
-const startRoom = (url, session) => {
+const startRoom = (url: string, session: string):void => {
   const ws = new WebSocket(
     `ws://192.168.1.45:8000/api/v1${url}?session=${session}`
   );

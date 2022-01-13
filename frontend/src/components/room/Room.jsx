@@ -1,8 +1,8 @@
 import React, {useState, useEffect} from 'react';
 import RoomUsers from './RoomUsers';
 import jwt_decode from "jwt-decode";
-import {startRoom} from './utils/wsclient';
-import {getCookie} from './utils/helpers';
+import {startRoom} from '../../utils/wsclient';
+import {getCookie} from '../../utils/helpers';
 
 const Room = () => {
     // let [users, setUser] = useState([])
@@ -41,7 +41,7 @@ const Room = () => {
           </div>
         </div>
         <div className="users_container">
-          <RoomUsers props={users}/>
+          <RoomUsers users={users}/>
         </div>
       </div>
     )

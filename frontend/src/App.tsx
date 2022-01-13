@@ -1,9 +1,9 @@
 import React from "react";
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
-import Home from "./components/Home";
-import Room from "./components/Room";
+import Home from "./components/home/Home";
+import Room from "./components/room/Room";
 
-const App = () => {
+const App:React.FC = () => {
   return (
     <BrowserRouter>
        <Routes>
