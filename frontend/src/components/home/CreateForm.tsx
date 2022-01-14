@@ -1,6 +1,12 @@
-import React from 'react';
-import { RoomFormValues, RoomFormElement } from '../../utils/interfaces';
-const CreateForm:React.FC = () => {
+import React from "react";
+import {
+  RoomFormValues,
+  RoomFormElement,
+} from "../../utils/interfaces/interfacesForm";
+import { GetRequest, PostRequest } from "../../utils/interfaces/InterfacesReq";
+import { RequestOtions } from "../../utils/reuests";
+
+const CreateForm: React.FC = () => {
   // const renderError = (form, error) => {
   //     let errorMsgBox = document.createElement('div');
   //     errorMsgBox.className = 'error_box';
@@ -32,19 +38,15 @@ const CreateForm:React.FC = () => {
     event.preventDefault();
     const form = event.currentTarget;
     const formValues: RoomFormValues = {
-      'name': form.elements.roomName.value,
-      'password': form.elements.roomPassword.value,
-    }
-    console.log(formValues)
-    // console.log(event.target.username.value)
-    // console.log(this.inputNode.value)
-    // const formElements: roomForm = {
-    //   'name': form.elements[0],
-    //   'password': form.elements[1]
-    // }
-    // const formElements = {
-    //   'name': event.currentTarget.elements.
-    // }
+      name: form.elements.roomName.value,
+      password: form.elements.roomPassword.value,
+    };
+    const requestOptions = RequestOtions.Post(
+      "POST",
+      {'name': formValues.name,'password': formValues.password},
+    { "Content-Type": "application/json" }
+    );
+    console.log(formValues);
     // const requestOptions = {
     //   'method': 'POST',
     //   'headers': {
@@ -64,7 +66,7 @@ const CreateForm:React.FC = () => {
     //         });
     //       }else{
     //         response.json().then(response => {
-    //           renderError(form, response.error) 
+    //           renderError(form, response.error)
     //         })
     //       }
     //   })
@@ -74,12 +76,22 @@ const CreateForm:React.FC = () => {
     <div className="room_form_wrapper">
       <h2 className="room_form_title">Creating a room</h2>
       <form onSubmit={handleSubmit} id="form">
-        <input placeholder="Room name" name="roomName" className="form_input" id="room_name"/>
-        <input placeholder="Room password" name="roomPassword" className="form_input" id="room_password" />
+        <input
+          placeholder="Room name"
+          name="roomName"
+          className="form_input"
+          id="room_name"
+        />
+        <input
+          placeholder="Room password"
+          name="roomPassword"
+          className="form_input"
+          id="room_password"
+        />
         <input type="submit" value="Create" />
       </form>
     </div>
-  ) 
+  );
 };
 
 export default CreateForm;
