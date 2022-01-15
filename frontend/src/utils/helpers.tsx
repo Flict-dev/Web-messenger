@@ -1,5 +1,3 @@
-import { GetRequest, PostRequest } from "./interfaces/InterfacesReq";
-
 const getCookie = (name: string): string => {
   const cookies = document.cookie.split(";");
   for (let i = 0; i < cookies.length; i++) {
@@ -13,21 +11,3 @@ const getCookie = (name: string): string => {
 
 export { getCookie };
 
-const getRequestOptions = (
-  method: string,
-  headers?: object,
-  body?: JSON
-): Object => {
-  const reqTypes = {
-    'Get': {
-      'method': method,
-      'headers': headers,
-    },
-    'Post': {
-      'method': method,
-      'headers': headers,
-      'body': body
-    }
-  }
-  return
-};
