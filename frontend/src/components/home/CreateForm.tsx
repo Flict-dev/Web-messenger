@@ -8,15 +8,11 @@ import { Form } from "./Form";
 import { FormRes } from "./FormRes";
 import { FormError } from "./FormError";
 
-type Error = {
-  show: boolean;
-  error: string;
-};
-
 const CreateForm: React.FC = () => {
   const [showForm, setForm] = useState<Boolean>(true);
   const [showRes, setRes] = useState<Boolean>(false);
-  const [error, setError] = useState<Error>({ show: false, error: "" });
+  const [errorMsg, setErrorMsg] = useState<String>("");
+  const [showError, setShow] = useState<Boolean>(false);
   const [path, setPath] = useState<String>("/");
 
   const handleSubmit = async (event: React.FormEvent<RoomFormElement>) => {
@@ -26,25 +22,39 @@ const CreateForm: React.FC = () => {
       name: form.elements.roomName.value,
       password: form.elements.roomPassword.value,
     };
-    const rOptions = RequestOtions.Post(
-      { name: formValues.name, password: formValues.password },
-      { "Content-Type": "application/json" }
-    );
+    if (formValues.name && formValues.password) {
+      const rOptions = RequestOtions.Post(
+        { name: formValues.name, password: formValues.password },
+        { "Content-Type": "application/json" }
+      );
 
-    await fetch("/v1/", rOptions).then((response) => {
-      if (response.ok) {
-        document.cookie = response.headers.get("Cookie") || "";
-        response.json().then((response) => {
-          setForm(false);
-          setPath(response.link);
-          setRes(true);
-        });
-      } else {
-        response.json().then((response) => {
-          setError({ show: true, error: response.error })
-        });
-      }
-    });
+      await fetch("/v1/", rOptions).then((response) => {
+        if (response.ok) {
+          document.cookie = response.headers.get("Cookie") || "";
+          response.json().then((response) => {
+            setForm(false);
+            setPath(response.link);
+            setRes(true);
+          });
+        } else {
+          response.json().then((response) => {
+            setErrorMsg(response.error);
+            setShow(true);
+            setTimeout((): void => {
+              setShow(false);
+              setErrorMsg("");
+            }, 3000);
+          });
+        }
+      });
+    } else {
+      setErrorMsg("Room name or password can't be empty");
+      setShow(true);
+      setTimeout((): void => {
+        setShow(false);
+        setErrorMsg("");
+      }, 3000);
+    }
   };
 
   return (
@@ -52,9 +62,7 @@ const CreateForm: React.FC = () => {
       {showForm && <Form handleSubmit={handleSubmit} />}
       {showRes && <FormRes link={`${path}`} />}
       <div className="errors_wrapper">
-        {error.show && (
-          <FormError data={{ show: error.show, error: error.error }} />
-        )}
+        {showError && <FormError error={`${errorMsg}`} />}
       </div>
     </div>
   );
