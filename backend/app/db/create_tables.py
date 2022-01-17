@@ -23,6 +23,7 @@ class Messages(Base):
     data = Column(String)
     created_at = Column(DateTime(), default=datetime.now)
     user_id = Column(Integer, ForeignKey('Users.id'))
+    user_name = Column(String)
 
     __table_args__ = (
         PrimaryKeyConstraint('id', name='message_pk'),

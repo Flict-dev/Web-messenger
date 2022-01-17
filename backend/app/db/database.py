@@ -165,11 +165,11 @@ class Database(DatabaseGet):
                 status_code=status.HTTP_400_BAD_REQUEST, detail="User name not unique"
             )
 
-    def create_message(self, message, user_id: int) -> bool:
+    def create_message(self, message, user_id: int, user_name: str) -> bool:
         messagesTable = self.get_table("Messages")
         user = self.get_user_by_id(user_id)
         with self.session as session:
-            message = messagesTable(data=message, user_id=user_id)
+            message = messagesTable(data=message, user_id=user_id, user_name=user_name)
             session.add(message)
             user.messages.append(message)
             session.commit()

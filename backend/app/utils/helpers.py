@@ -13,5 +13,5 @@ class Parser:
         return "$2b$12$" + hash.replace("slash", "/").replace("hsals", "\\")
 
     def parse_msg_time(self, time: str) -> str:
-        date = datetime.strptime(time, "%Y-%m-%d %H:%M:%S.%f")
+        date = datetime.strptime(str(time), "%Y-%m-%d %H:%M:%S.%f")
         return date.strftime("%d-%b %Y %H:%M")

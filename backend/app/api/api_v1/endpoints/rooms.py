@@ -88,21 +88,21 @@ async def room(name: str, session: Optional[str] = Cookie(None)):
         decoded_session = decoder.decode_session(session)
         user = database.get_user_by_name(decoded_session["username"], room.id)
         if decoder.verify_session(hashed_name, room.password, session) and user.status:
-            encoded_messages, messages = database.get_all_messages(room.id), {}
+            encoded_messages, messages = database.get_all_messages(room.id), []
             for message in encoded_messages:
-                user = database.get_user_by_id(message.user_id)
-                messages[user.name] = {
+                messages.append({
                     "Message": message.data,
                     "Created_at": parser.parse_msg_time(message.created_at),
                     "Status": user.status,
-                }
+                    "Username": message.user_name
+                }) 
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
                     "Status": 200,
                     "User": decoded_session["username"],
                     "Messages": messages,
-                    "Users": list(map(lambda user: user.name, room.users)),
+                    "Users": list(map(lambda user: {'name':user.name, 'status': user.status }, room.users)),
                 },
                 headers={
                     "Content-Type": "application/json",
@@ -244,7 +244,7 @@ async def websocket_endpoint(
                 try:
                     while True:
                         data = await websocket.receive_json()
-                        if database.create_message(data, user.id):
+                        if database.create_message(data, user.id, user.name):
                             await room.broadcast(200, data["message"], username)
                 except WebSocketDisconnect:
                     await room.disconnect(connection)

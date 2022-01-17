@@ -6,9 +6,9 @@ const RoomUsers = ({users}) => {
     <div>
       <h2>Room users</h2>
       <div className="users_list">
-        {Object.keys(users).forEach((key, index) => {
+        {users.map((user, index) => {
           return (
-            <User user={users[key]} key={index}/>
+            <User user={user} key={index}/>
           )
         })}
       </div>
