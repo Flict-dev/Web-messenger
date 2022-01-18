@@ -4,15 +4,12 @@ import { getCookie } from "../../utils/helpers";
 import { RequestOtions } from "../../utils/reuests";
 import { decodeMessages } from "../../utils/crypt";
 
-type DbUser = {
+export type UserType = {
   name: string;
   status: boolean;
-};
-
-interface RoomUser extends DbUser {
-  online: boolean;
+  online?: boolean;
   time: string;
-}
+};
 
 type Message = {
   Message: string;
@@ -26,23 +23,49 @@ namespace ReqSettings {
   export const session = getCookie("session");
 }
 
+
+// namespace WsFunctions {
+//   export function setOnline()
+// }
+
 const Room: React.FC = () => {
-  const [allUsers, setAUsers] = useState<Array<DbUser>>([]);
-  // const []
+  const [users, setUsers] = useState<Array<UserType>>([]);
   const [messages, setMessages] = useState<Array<Message>>([]);
   const [username, setName] = useState<string>("");
 
   const startRoom = (): void => {
+    type wsResponse = {
+      status: keyof typeof wsHandler;
+      username?: string;
+      message?: string;
+      connections?: Array<UserType>;
+      time: string;
+    };
+
+    const wsHandler = {
+      200: () => {
+        console.log(200, "lox");
+      },
+      201: () => {
+        console.log(201);
+      },
+      202: () => {
+        console.log(202);
+      },
+      203: () => {
+        console.log(203);
+      },
+    };
+
     const ws = new WebSocket(
       `ws://192.168.1.45:8000/api/v1${ReqSettings.url}?session=${ReqSettings.session}`
     );
-    ws.onopen = (e) => {
-      console.log(e);
-    };
+    ws.onopen = (e) => {};
     ws.onclose = () => console.log("ws closed");
-    ws.onmessage = (e) => {
-      const message = JSON.parse(e.data);
-      console.log("e", message);
+    ws.onmessage = (event: MessageEvent) => {
+      const response: wsResponse = JSON.parse(event.data);
+      const hadnler = wsHandler[response.status];
+      hadnler();
     };
   };
 
@@ -52,9 +75,8 @@ const Room: React.FC = () => {
       if (response.ok) {
         response.json().then((response) => {
           setName(response.User);
-          console.log(response.Users);
-          const decodedMessages = decodeMessages(response.Messages);
-          setMessages(decodedMessages);
+          setUsers(response.Users);
+          setMessages(decodeMessages(response.Messages));
         });
       } else {
         console.error();
@@ -82,7 +104,7 @@ const Room: React.FC = () => {
         </div>
       </div>
       <div className="users_container">
-        <RoomUsers users={allUsers} />
+        <RoomUsers users={users} />
       </div>
     </div>
   );

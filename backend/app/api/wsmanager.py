@@ -21,6 +21,8 @@ class Connection:
     def __init__(self, name: str, websocket: WebSocket) -> None:
         self.name = name
         self.websocket = websocket
+        self._parser = Parser()
+        self.time = self._parser.parse_msg_time(str(datetime.now()))
 
 
 class Room:
@@ -34,6 +36,7 @@ class Room:
 
     async def connect(self, connection: Connection) -> None:
         await connection.websocket.accept()
+        connection.time = self._parser.parse_msg_time(str(datetime.now()))
         await self.send_connections(connection)
         await self.broadcast(201, f"{connection.name} joined chat", connection.name)
 
@@ -53,7 +56,7 @@ class Room:
         self.connections.remove(connection)
 
     async def send_connections(self, connection: Connection) -> None:
-        named_connections = list(map(lambda x: x.name, self.connections))
+        named_connections = list(map(lambda x: {'name': x.name, 'time': x.time}, self.connections))
         data = {"status": 203, "connections": named_connections}
         await connection.websocket.send_json(data)
 
