@@ -102,7 +102,7 @@ async def room(name: str, session: Optional[str] = Cookie(None)):
                     "Status": 200,
                     "User": decoded_session["username"],
                     "Messages": messages,
-                    "Users": list(map(lambda user: {'name':user.name, 'status': user.status }, room.users)),
+                    "Users": list(map(lambda user: {'name':user.name, 'status': user.status, 'online': False }, room.users)),
                 },
                 headers={
                     "Content-Type": "application/json",
