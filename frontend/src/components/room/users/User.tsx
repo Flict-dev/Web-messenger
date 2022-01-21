@@ -5,30 +5,36 @@ const OnlineBlock: React.FC<{ user: UserType }> = ({ user }) => {
   if (!user.status) {
     return (
       <div className="status status_blocked">
-        <p>Blocked</p>
+        <p>
+          <span className="status_bl_t">Blocked</span>
+        </p>
       </div>
     );
   } else if (user.online) {
     return (
       <div className="status status_online">
-        <p>Online</p>
+        <p>
+          <span className="status_on_t">Online</span>
+        </p>
       </div>
     );
   }
   return (
     <div className="status status_disconnected">
-      <p>Been at {user.time ? user.time : localStorage.getItem(user.name)}</p>
+      <p>
+        <span className="status_dis_t">
+          Was at {user.time ? user.time : localStorage.getItem(user.name)}
+        </span>
+      </p>
     </div>
   );
 };
 
 const User: React.FC<{ user: UserType }> = ({ user }) => {
-  let userStatus: string = `user_status_${user.status}`;
   return (
     <div className="user_wrapper">
-      <div className={userStatus}></div>
       <div id={user.name} className="user_name_wrapper">
-        <p className="user_name">{user.name}</p> <OnlineBlock user={user} />
+        <p className="user_name">{user.name}:</p> <OnlineBlock user={user} />
       </div>
     </div>
   );

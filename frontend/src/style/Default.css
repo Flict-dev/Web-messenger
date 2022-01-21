@@ -1,0 +1,200 @@
+.App {
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 600px;
+}
+.root{
+  height: 100vh;
+}
+body {
+  background: #131313;
+  font-family: "Anonymous Pro", monospace;
+  color: #a60f0f;
+}
+input {
+  outline: none;
+}
+body,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  padding: 0 20px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.mr_robot {
+  font-family: "MrRobot";
+  font-weight: 400;
+  color: #a60f0f;
+  margin-right: 14px;
+}
+.main_title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 50px;
+  margin-bottom: 20px;
+  color: #fff;
+}
+.room_form,
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.room_form_wrapper {
+  width: 300px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+.form {
+  background: #333333;
+  padding: 20px;
+  border-radius: 4px;
+  border: 1.2px solid #0000;
+}
+input {
+  width: 90%;
+  background-color: #131313;
+  color: #fff;
+  /* border: 1.2px solid #840905; */
+  border: none;
+  box-shadow: 0 0 20px #131313;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+.form_input {
+  margin-top: 10px;
+}
+.form_input_pswd {
+  margin-bottom: 10px;
+}
+input::placeholder {
+  color: #6e6e6e;
+  font-family: "Anonymous Pro", monospace !important;
+}
+input::value {
+  font-family: "Anonymous Pro", monospace !important;
+}
+.room_btn {
+  width: 98%;
+  color: #6e6e6e;
+  font-family: "Anonymous Pro", monospace;
+  transition: all 0.3s ease;
+}
+.room_btn:hover {
+  cursor: pointer;
+  color: #fff;
+  box-shadow: 0 0 30px #131313;
+}
+.room_form_title {
+  color: #fff;
+}
+
+.form_error_msg {
+  color: #fff;
+}
+.errors_wrapper {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.form_error {
+  width: 100%;
+  padding: 20px;
+  background: #333333;
+  border-radius: 4px;
+  margin-top: 15px;
+}
+.form_error_msg {
+  margin-top: 5px;
+}
+
+.form_res {
+  width: 100%;
+  background: #333333;
+  padding: 20px;
+  border-radius: 4px;
+  border: 1.2px solid #0000;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+.form_res_title {
+  color: #fff;
+  font-size: 20px;
+}
+
+.room_link {
+  margin-top: 20px;
+  padding: 8px 12px;
+  color: #6e6e6e;
+  background-color: #131313;
+  border: none;
+  box-shadow: 0 0 20px #131313;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.room_link:hover {
+  color: #fff;
+  box-shadow: 0 0 30px #131313;
+}
+/* Typing Animation */
+.line-1 {
+  position: relative;
+  top: 50%;
+  width: 24em;
+  margin: 0 auto;
+  border-right: 2px solid rgba(255, 255, 255, 0.75);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  transform: translateY(-50%);
+}
+
+.anim-typewriter {
+  animation: typewriter 3s steps(17) 1s 1 normal both,
+    blinkTextCursor 500ms steps(17) infinite normal;
+}
+@keyframes typewriter {
+  from {
+    width: 0;
+  }
+  to {
+    width: 9.3em;
+  }
+}
+@keyframes blinkTextCursor {
+  from {
+    border-right-color: rgba(255, 255, 255, 0.75);
+  }
+  to {
+    border-right-color: transparent;
+  }
+}
+
+@font-face {
+  font-family: "MrRobot";
+  src: url(./fonts/mrrobot.ttf);
+}

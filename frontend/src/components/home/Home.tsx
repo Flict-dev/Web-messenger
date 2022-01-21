@@ -27,7 +27,7 @@ const Home = () => {
 
   return (
     <div className="App">
-      <h1>Hello friend from {ip}</h1>
+      <h1 className=" main_title"><span className="mr_robot">Hello friend</span> <p className="line-1 anim-typewriter">from {ip}</p></h1>
       <CreateForm />
     </div>
   );

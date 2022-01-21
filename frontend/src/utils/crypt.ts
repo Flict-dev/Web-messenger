@@ -1,9 +1,8 @@
 import jwt_decode from "jwt-decode";
-import React from "react";
 import Message from "../components/room/Room";
 import { getCookie } from "./helpers";
 
-type Session = {
+export type Session = {
   name: string;
   password: string;
   username: string;

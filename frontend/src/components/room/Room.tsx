@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getCookie } from "../../utils/helpers";
+import { getCookie, sortUsers } from "../../utils/helpers";
 import { RequestOtions } from "../../utils/reuests";
 import { decodeMessages } from "../../utils/crypt";
 import {
@@ -10,6 +10,11 @@ import {
   wsRequest203,
 } from "./roomTypes";
 import RoomUsers from "./users/RoomUsers";
+import "../../style/Room.css";
+import AdminPanel from "./users/AdminPanel";
+import RoomUser from "./users/RoomUser";
+import CssLoader from "./Loaders";
+import Chat from "./chat/Chat";
 namespace ReqSettings {
   export const url = document.location.pathname;
   export const session = getCookie("session");
@@ -19,6 +24,7 @@ const Room: React.FC = () => {
   const [users, setUsers] = useState<Array<UserType>>([]);
   const [messages, setMessages] = useState<Array<Message>>([]);
   const [username, setName] = useState<string>("");
+  const [showAnim, setAnim] = useState<boolean>(true);
 
   const startRoom = (usersGet: Array<UserType>): void => {
     type wsResponse = {
@@ -35,29 +41,25 @@ const Room: React.FC = () => {
       },
 
       201: (r: wsRequest201) => {
-        let index = usersGet.findIndex((user) => user.name == r.username);
+        let index = usersGet.findIndex((user) => user.name === r.username);
         if (index >= 0) {
           let c_user = usersGet[index];
           c_user.online = true;
-          setUsers([...usersGet]);
+          setUsers(sortUsers(usersGet));
         } else {
-          const new_user: UserType = {
-            name: r.username,
-            status: true,
-            online: true,
-          };
-          setUsers([...usersGet, new_user]);
+          users.push({ name: r.username, status: true, online: true });
+          setUsers([...sortUsers(usersGet)]);
         }
       },
 
       202: (r: wsRequest202) => {
-        let index = usersGet.findIndex((user) => user.name == r.username);
+        let index = usersGet.findIndex((user) => user.name === r.username);
         if (index >= 0) {
           let c_user = usersGet[index];
           c_user.online = false;
           c_user.time = r.time;
           localStorage.setItem(r.username, r.time);
-          setUsers([...usersGet]);
+          setUsers([...sortUsers(usersGet)]);
         } else {
           console.log("errror");
         }
@@ -66,12 +68,13 @@ const Room: React.FC = () => {
       203: (r: wsRequest203) => {
         usersGet.forEach((user) => {
           r.connections.forEach((connection) => {
-            if (user.name == connection.name) {
+            if (user.name === connection.name) {
               user.online = true;
             }
           });
         });
-        setUsers(usersGet);
+        setUsers([...sortUsers(usersGet)]);
+        setAnim(false);
       },
     };
 
@@ -105,22 +108,30 @@ const Room: React.FC = () => {
   useEffect(() => {
     initialRequest();
   }, []);
+
   return (
-    <div className="container">
-      <div className="admin_container"></div>
-      <div className="msg_container">
-        <div className="messages"></div>
-        <div className="send_wrapper">
-          <input
-            type="text"
-            className="msg_input"
-            id="msg_input"
-            placeholder="message"
-          />
-          <input type="submit" className="msg_btn" id="msg_btn" value="send" />
+    <div className="app_wrapper">
+      {showAnim ? (
+        <CssLoader />
+      ) : (
+        <div className="container">
+          <div className="user_container">
+            {username === "Admin" ? (
+              <AdminPanel
+                users={users.filter((user) => user.name !== "Admin")}
+              />
+            ) : (
+              <RoomUser username={username} />
+            )}
+          </div>
+          <div className="msg_container">
+            <Chat messages={messages} />
+          </div>
+          <div className="users_container">
+            <RoomUsers users={users} />
+          </div>
         </div>
-      </div>
-      <RoomUsers users={users} />
+      )}
     </div>
   );
 };

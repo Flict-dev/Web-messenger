@@ -3,7 +3,7 @@
 export type UserType = {
   name: string;
   status: boolean;
-  online?: boolean;
+  online: boolean;
   time?: string;
 };
 

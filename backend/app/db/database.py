@@ -43,13 +43,13 @@ class DtabaseHelper:
             )
             return len(user) > 0
 
-    def check_msg_key(self, username: int):
-        keyTable = self.get_table("MsgKeys")
-        with self.session as session:
-            key = (
-                session.query(keyTable).where(keyTable.destinied_for == username).all()
-            )
-            return len(key) > 0
+    # def check_msg_key(self, username: int):
+    #     keyTable = self.get_table("MsgKeys")
+    #     with self.session as session:
+    #         key = (
+    #             session.query(keyTable).where(keyTable.destinied_for == username).all()
+    #         )
+    #         return len(key) > 0
 
 
 class DatabaseGet(DtabaseHelper):
@@ -101,22 +101,22 @@ class DatabaseGet(DtabaseHelper):
         room = self.get_room_by_id(room_id)
         return room.users
 
-    def get_msg_key(self, room_id: int, destinied_for: str) -> MsgKeys:
-        keyTable = self.get_table("MsgKeys")
-        with self.session as session:
-            key = (
-                session.query(keyTable)
-                .where(
-                    keyTable.room_id == room_id
-                    and keyTable.destinied_for == destinied_for
-                )
-                .first()
-            )
-            if not key:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail="Key not found"
-                )
-            return key
+    # def get_msg_key(self, room_id: int, destinied_for: str) -> MsgKeys:
+    #     keyTable = self.get_table("MsgKeys")
+    #     with self.session as session:
+    #         key = (
+    #             session.query(keyTable)
+    #             .where(
+    #                 keyTable.room_id == room_id
+    #                 and keyTable.destinied_for == destinied_for
+    #             )
+    #             .first()
+    #         )
+    #         if not key:
+    #             raise HTTPException(
+    #                 status_code=status.HTTP_404_NOT_FOUND, detail="Key not found"
+    #             )
+    #         return key
 
     def get_all_messages(self, room_id: int):
         users = self.get_room_users(room_id)
@@ -174,17 +174,17 @@ class Database(DatabaseGet):
             user.messages.append(message)
             session.commit()
 
-    def create_msg_key(self, room_id: int, destinied_for: str, key: str) -> bool:
-        keyTable = self.get_table("MsgKeys")
-        if not self.check_msg_key(destinied_for):
-            with self.session as session:
-                note = keyTable(room_id=room_id, destinied_for=destinied_for, key=key)
-                session.add(note)
-                session.commit()
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="Key alredy created"
-            )
+    # def create_msg_key(self, room_id: int, destinied_for: str, key: str) -> bool:
+    #     keyTable = self.get_table("MsgKeys")
+    #     if not self.check_msg_key(destinied_for):
+    #         with self.session as session:
+    #             note = keyTable(room_id=room_id, destinied_for=destinied_for, key=key)
+    #             session.add(note)
+    #             session.commit()
+    #     else:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_409_CONFLICT, detail="Key alredy created"
+    #         )
 
     def delete_key(self, keyId: int):
         keyTable = self.get_table("MsgKeys")
