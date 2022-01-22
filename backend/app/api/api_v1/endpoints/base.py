@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, Request
 from fastapi.responses import JSONResponse
 from shemas.room import RoomReq
-from core.utils import parser, encoder, database
+from core.tools import parser, encoder, database
 
 router = APIRouter()
 
@@ -21,7 +21,7 @@ async def create_room(room: RoomReq):
     hashed_password = encoder.hash_password(plainPassword)
     link = encoder.gen_hash_link(hashed_name)
     if hashed_password:
-        database.create_room({"name": hashed_name, "password": hashed_password})
+        database.create_room(hashed_name, hashed_password)
         sessionCookie = encoder.encode_session(
             hashed_name, plainPassword, "Admin", encoder.key
         )

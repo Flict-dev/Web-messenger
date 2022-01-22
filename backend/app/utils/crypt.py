@@ -1,7 +1,10 @@
+from os import stat
 import re
 import jwt
 from passlib.context import CryptContext
 from cryptography.fernet import Fernet
+from fastapi.responses import JSONResponse
+from fastapi import status
 
 
 class Validate:
@@ -53,11 +56,6 @@ class Encoder:
             algorithm=self.sessionAlg,
         )
 
-    def encrypt_message(self, message: str, msg_key: str) -> str:
-        encoded_msg = message.encode()
-        fernet = Fernet(msg_key)
-        return fernet.encrypt(encoded_msg)
-
 
 class Decoder:
     def __init__(self, sessionKey: str, sessionAlg: str = "HS256") -> None:
@@ -78,17 +76,19 @@ class Decoder:
         return self.context.verify(name, hashed_name)
 
     def verify_session(
-        self, name: str, password: str, session: str, admin: bool = False
+        self, name: str, password: str, session: str, status: bool, admin: bool = False
     ) -> bool:
-        decoded_session = self.decode_session(session)
-        room_name, room_password = decoded_session["name"], decoded_session["password"]
-        if admin:
-            return (
-                room_name == name
-                and self.verify_password(room_password, password)
-                and decoded_session["username"] == "Admin"
+        if session:
+            decoded_session = self.decode_session(session)
+            s_name, s_password = decoded_session["name"], decoded_session["password"]
+            verify = (
+                s_name == name and self.verify_password(s_password, password) and status
             )
-        return room_name == name and self.verify_password(room_password, password)
+            return verify and decoded_session["username"] == "Admin" if admin else verify
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"Unauthorized": "Session doesn't exist"},
+        )
 
     def session_add_key(self, session: str, msg_key: str) -> str:
         decoded_session = self.decode_session(session)
@@ -98,7 +98,3 @@ class Decoder:
             decoded_session["username"],
             msg_key,
         )
-
-    def dcrypt_message(self, encoded_msg: str, msg_key: str) -> str:
-        fernet = Fernet(msg_key)
-        return fernet.decrypt(encoded_msg)

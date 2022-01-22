@@ -2,19 +2,14 @@ import React, { useState, useEffect } from "react";
 import { getCookie, sortUsers } from "../../utils/helpers";
 import { RequestOtions } from "../../utils/reuests";
 import { decodeMessages } from "../../utils/crypt";
-import {
-  UserType,
-  Message,
-  wsRequest201,
-  wsRequest202,
-  wsRequest203,
-} from "./roomTypes";
+import { UserType, Message } from "./roomTypes";
 import RoomUsers from "./users/RoomUsers";
 import "../../style/Room.css";
 import AdminPanel from "./users/AdminPanel";
 import RoomUser from "./users/RoomUser";
 import CssLoader from "./Loaders";
 import Chat from "./chat/Chat";
+import wsHandler from "./wsHandler";
 namespace ReqSettings {
   export const url = document.location.pathname;
   export const session = getCookie("session");
@@ -35,49 +30,6 @@ const Room: React.FC = () => {
       time: string;
     };
 
-    const wsHandler = {
-      200: (r: object) => {
-        console.log(r, "plain text");
-      },
-
-      201: (r: wsRequest201) => {
-        let index = usersGet.findIndex((user) => user.name === r.username);
-        if (index >= 0) {
-          let c_user = usersGet[index];
-          c_user.online = true;
-          setUsers(sortUsers(usersGet));
-        } else {
-          users.push({ name: r.username, status: true, online: true });
-          setUsers([...sortUsers(usersGet)]);
-        }
-      },
-
-      202: (r: wsRequest202) => {
-        let index = usersGet.findIndex((user) => user.name === r.username);
-        if (index >= 0) {
-          let c_user = usersGet[index];
-          c_user.online = false;
-          c_user.time = r.time;
-          localStorage.setItem(r.username, r.time);
-          setUsers([...sortUsers(usersGet)]);
-        } else {
-          console.log("errror");
-        }
-      },
-
-      203: (r: wsRequest203) => {
-        usersGet.forEach((user) => {
-          r.connections.forEach((connection) => {
-            if (user.name === connection.name) {
-              user.online = true;
-            }
-          });
-        });
-        setUsers([...sortUsers(usersGet)]);
-        setAnim(false);
-      },
-    };
-
     const ws = new WebSocket(
       `ws://192.168.1.45:8000/api/v1${ReqSettings.url}?session=${ReqSettings.session}`
     );
@@ -86,7 +38,9 @@ const Room: React.FC = () => {
     ws.onmessage = (event: MessageEvent) => {
       const response: wsResponse = JSON.parse(event.data);
       const hadnler = wsHandler[response.status];
-      hadnler(Object(response));
+      let result = hadnler(Object(response), usersGet);
+      setUsers(result.users);
+      setAnim(result.animation);
     };
   };
 
