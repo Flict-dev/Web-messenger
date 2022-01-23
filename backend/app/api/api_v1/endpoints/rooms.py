@@ -12,8 +12,8 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from typing import Optional
 from api.wsmanager import Room, Connection
-from shemas.room import RoomAuth
-from shemas.user import UserBlock
+from schemes.room import RoomAuth
+from schemes.user import UserBlock
 from core.tools import manager, parser, encoder, decoder, database
 from core.config import settings
 from pydantic import BaseModel

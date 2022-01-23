@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, Request
 from fastapi.responses import JSONResponse
-from shemas.room import RoomReq
+from schemes.room import RoomReq
 from core.tools import parser, encoder, database
 
 router = APIRouter()
@@ -35,7 +35,7 @@ async def create_room(room: RoomReq):
         )
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
-        content={"error": "Eliot hates when the password is too simple"},
+        content={"error": "Elliot hates when the password is too simple"},
         headers={
             "Content-Type": "application/json",
         },
