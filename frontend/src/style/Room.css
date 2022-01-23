@@ -182,3 +182,21 @@
   border-radius: 4px;
   border: 1.2px solid #0000;
 }
+
+.loader_wrapper {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.loader_text {
+  position: relative;
+  top: 80px;
+}
+.load_err_t{
+  position: relative;
+  top: 20px
+}

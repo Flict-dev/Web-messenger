@@ -6,7 +6,7 @@ import {
 import { RequestOtions } from "../../utils/reuests";
 import { Form } from "./Form";
 import { FormRes } from "./FormRes";
-import { FormError } from "./FormError";
+import { FormError } from "../errors/FormError";
 
 const CreateForm: React.FC = () => {
   const [showForm, setForm] = useState<Boolean>(true);

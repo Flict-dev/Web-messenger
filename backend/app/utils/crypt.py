@@ -4,7 +4,10 @@ import jwt
 from passlib.context import CryptContext
 from cryptography.fernet import Fernet
 from fastapi.responses import JSONResponse
-from fastapi import status
+from fastapi import status, HTTPException
+from time import time
+from core.config import settings
+from jwt.exceptions import DecodeError
 
 
 class Validate:
@@ -40,10 +43,14 @@ class Encoder:
     def hash_name(self, name: str) -> str:
         if name:
             return self.context.hash(name)
-        raise ValueError("name")
 
     def encode_session(
-        self, roomName: str, roomPassword: str, username: str, msg_key: str
+        self,
+        roomName: str,
+        roomPassword: str,
+        username: str,
+        msg_key: str,
+        x_token: str,
     ) -> str:
         return jwt.encode(
             payload={
@@ -51,6 +58,8 @@ class Encoder:
                 "password": roomPassword,
                 "username": username,
                 "msg_key": msg_key,
+                "x_token": x_token,
+                "expires": time() + settings.JWT_TIME_LIVE,
             },
             key=self.sessionKey,
             algorithm=self.sessionAlg,
@@ -75,19 +84,36 @@ class Decoder:
     def verify_name(self, name: str, hashed_name: str) -> bool:
         return self.context.verify(name, hashed_name)
 
+    def parse_session(self, session):
+        decoded_session = self.decode_session(session)
+        return (
+            decoded_session["name"],
+            decoded_session["password"],
+            decoded_session["username"],
+            decoded_session["expires"],
+        )
+
     def verify_session(
         self, name: str, password: str, session: str, status: bool, admin: bool = False
     ) -> bool:
         if session:
-            decoded_session = self.decode_session(session)
-            s_name, s_password = decoded_session["name"], decoded_session["password"]
+            try:
+                s_name, s_password, username, expires = self.parse_session(session)
+            except DecodeError:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail={"Unauthorized": "Session invalid"},
+                )
             verify = (
-                s_name == name and self.verify_password(s_password, password) and status
+                s_name == name
+                and self.verify_password(s_password, password)
+                and status
+                and expires > time()
             )
-            return verify and decoded_session["username"] == "Admin" if admin else verify
-        return JSONResponse(
+            return verify and username == "Admin" if admin else verify
+        raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"Unauthorized": "Session doesn't exist"},
+            detail={"Unauthorized": "Session doesn't exist"},
         )
 
     def session_add_key(self, session: str, msg_key: str) -> str:

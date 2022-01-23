@@ -23,7 +23,7 @@ async def create_room(room: RoomReq):
     if hashed_password:
         database.create_room(hashed_name, hashed_password)
         sessionCookie = encoder.encode_session(
-            hashed_name, plainPassword, "Admin", encoder.key
+            hashed_name, plainPassword, "Admin", encoder.key, encoder.hash_name("Admin")
         )
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,

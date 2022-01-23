@@ -5,6 +5,8 @@ from fastapi import (
     status,
     Cookie,
     Query,
+    Header,
+    Depends,
 )
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
@@ -13,40 +15,61 @@ from api.wsmanager import Room, Connection
 from shemas.room import RoomAuth
 from shemas.user import UserBlock
 from core.tools import manager, parser, encoder, decoder, database
+from core.config import settings
+from pydantic import BaseModel
 
 router = APIRouter()
+from fastapi_csrf_protect import CsrfProtect
+
+# from fastapi_csrf_protect.exceptions import CsrfProtectError
+
+
+class CsrfSettings(BaseModel):
+    secret_key: str = settings.CSRF_SECRET_KEY
+
+
+@CsrfProtect.load_config
+def get_csrf_config():
+    return CsrfSettings()
 
 
 @router.post("/{name}/auth")
-async def room_password_auth(auth: RoomAuth):
+async def room_password_auth(
+    name: str, auth: RoomAuth, x_token: Optional[str] = Header(None)
+):
     data = jsonable_encoder(auth)
-    token, username, password = data["room_token"], data["username"], data["password"]
-    room = database.get_room_by_name(token)
+    username, password = data["username"], data["password"]
+    hased_name = parser.parse_link_hash(name)
+    room = database.get_room_by_name(hased_name)
     if decoder.verify_password(password, room.password):
         if database.check_user(username, room.id):
             database.create_user(username, False, room.id)
-            sessionCookie = encoder.encode_session(token, password, username, "")
+            sessionCookie = encoder.encode_session(
+                hased_name, password, username, "", encoder.hash_name(username)
+            )
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={"User": data["username"]},
                 headers={
                     "Content-Type": "application/json",
-                    "Set-Cookie": f"session={sessionCookie}",
+                    "Cookie": f"session={sessionCookie}",
                 },
             )
     return JSONResponse(
         status_code=status.HTTP_401_UNAUTHORIZED,
         content={"Erorr": "Invalid password"},
-        headers={
-            "Content-Type": "application/json",
-        },
+        headers={"Content-Type": "application/json", "WWW-Authenticate": "Bearer"},
     )
 
 
 @router.get("/{name}")
-async def room(name: str, session: Optional[str] = Cookie(None)):
-    hashed_name, room, user = parser.get_room_data(name, session)
-    if decoder.verify_session(hashed_name, room.password, session, user.status):
+async def room(
+    name: str,
+    authorization: Optional[str] = Header(None),
+    csrf_protect: CsrfProtect = Depends(),
+):
+    hashed_name, room, user = parser.get_room_data(name, authorization)
+    if decoder.verify_session(hashed_name, room.password, authorization, user.status):
         enc_messages, messages = database.get_all_messages(room.id), []
         for message in enc_messages:
             messages.append(
@@ -62,20 +85,12 @@ async def room(name: str, session: Optional[str] = Cookie(None)):
                 "Status": 200,
                 "User": user.name,
                 "Messages": messages,
-                "Users": list(
-                    map(
-                        lambda user: {
-                            "name": user.name,
-                            "status": user.status,
-                            "online": False,
-                        },
-                        room.users,
-                    )
-                ),
+                "Users": parser.parse_room_users(list(room.users)),
             },
             headers={
                 "Content-Type": "application/json",
                 "Connection": "keep-alive",
+                "X-CSRF-Token": csrf_protect.generate_csrf(),
             },
         )
     return JSONResponse(
@@ -83,14 +98,17 @@ async def room(name: str, session: Optional[str] = Cookie(None)):
         content={"Status": "Invalid session"},
         headers={
             "Content-Type": "application/json",
+            "WWW-Authenticate": "Bearer",
         },
     )
 
 
-@router.delete("/{name}")
-async def delete_room(name: str, session: Optional[str] = Cookie(None)):
-    hashed_name, room, user = parser.get_room_data(name, session)
-    if decoder.verify_session(hashed_name, room.password, session, user.status, True):
+@router.delete("/{name}")  # ADD Csrf check
+async def delete_room(name: str, authorization: Optional[str] = Header(None)):
+    hashed_name, room, user = parser.get_room_data(name, authorization)
+    if decoder.verify_session(
+        hashed_name, room.password, authorization, user.status, True
+    ):
         database.delete_room(room.id)
         return JSONResponse(
             status_code=status.HTTP_204_NO_CONTENT,
@@ -104,13 +122,15 @@ async def delete_room(name: str, session: Optional[str] = Cookie(None)):
     )
 
 
-@router.patch("/{name}")
+@router.patch("/{name}")  # ADD Csrf check
 async def block_room_user(
-    name: str, user: UserBlock, session: Optional[str] = Cookie(None)
+    name: str, user: UserBlock, authorization: Optional[str] = Header(None)
 ):
-    hashed_name, room, user = parser.get_room_data(name, session)
+    hashed_name, room, user = parser.get_room_data(name, authorization)
     username = jsonable_encoder(user)["username"]
-    if decoder.verify_session(hashed_name, room.password, session, user.status, True):
+    if decoder.verify_session(
+        hashed_name, room.password, authorization, user.status, True
+    ):
         await database.block_user(username, room.id)
         return JSONResponse(
             status_code=status.HTTP_200_OK,
