@@ -46,7 +46,9 @@ class Room:
         self.connections.remove(connection)
 
     async def send_connections(self, connection: Connection) -> None:
-        named_connections = list(map(lambda x: {'name': x.name, 'time': x.time}, self.connections))
+        named_connections = list(
+            map(lambda x: {"name": x.name, "time": x.time}, self.connections)
+        )
         data = {"status": 203, "connections": named_connections}
         await connection.websocket.send_json(data)
 

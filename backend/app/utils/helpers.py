@@ -1,4 +1,3 @@
-from fastapi.encoders import jsonable_encoder
 from datetime import datetime
 from db.database import Database
 from utils.crypt import Decoder
@@ -10,13 +9,6 @@ class Parser:
     def __init__(self):
         self._database = Database(settings.DBURL)
         self._decoder = Decoder(settings.SECRET_KEY)
-
-    @staticmethod
-    def parse_room_data(data) -> tuple:
-        json_data = jsonable_encoder(data)
-        if json_data["password"] and json_data["name"]:
-            return (json_data["name"], json_data["password"])
-        raise ValueError("Parse error at room data")
 
     @staticmethod
     def parse_link_hash(hash: str) -> str:
@@ -43,11 +35,10 @@ class Parser:
 
     def get_room_data(self, name: str, session: str = "") -> tuple:
         hashed_name = self.parse_link_hash(name)
-        room = self._database.get_room_by_name(hashed_name)
         if session:
-            user = self._database.get_user_by_name(
-                self._decoder.decode_session(session)["username"], room.id
-            )
+            d_session = self._decoder.decode_session(session)
+            room = self._database.get_room_by_id(d_session["room_id"])
+            user = self._database.get_user_by_id(d_session["user_id"])
             return (hashed_name, room, user)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

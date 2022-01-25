@@ -68,34 +68,35 @@ const Room: React.FC = () => {
       Authorization: ReqSettings.session,
     });
 
-    // await axios(`/v1${ReqSettings.url}`, {
-    //   method: "get",
-    //   withCredentials: true,
-    // })
-    //   .then((response) => {
-    //     setName(response.data.User);
-    //     setMessages(response.data.Messages);
-    // setMessages(decodeMessages(response.Messages));
-    //     startRoom(response.data.Users);
-    //   })
-    //   .catch((error) => {
-    //     console.log(error);
-    //   });
-
-    await fetch(`/v1${ReqSettings.url}`, rOptions).then((response) => {
-      if (response.status === 200) {
-        setCsrf(response.headers.get("X-CSRF-Token") || "");
-        response.json().then((response) => {
-          setName(response.User);
-          setMessages(response.Messages);
-          setMessages(decodeMessages(response.Messages));
-          startRoom(response.Users);
-        });
-      } else if (response.status === 401) {
+    await axios(`/v1${ReqSettings.url}`, rOptions)
+      .then((response) => {
+        setCsrf(response.headers["x-csrf-token"] || "");
+        localStorage.setItem("x-token", response.headers["x-token"] || "");
+        setName(response.data.User);
+        setMessages(decodeMessages(response.data.Messages));
+        startRoom(response.data.Users);
+      })
+      .catch((error) => {
+        console.log(error)
         setAnim(false);
         setShowAuth(true);
-      }
-    });
+      });
+
+    // await fetch(`/v1${ReqSettings.url}`, rOptions).then((response) => {
+    //   if (response.status === 200) {
+    //     setCsrf(response.headers.get("X-CSRF-Token") || "");
+    //     localStorage.setItem("x-token", response.headers.get("X-Token") || "");
+    //     response.json().then((response) => {
+    //       setName(response.User);
+    //       setMessages(response.Messages);
+    //       setMessages(decodeMessages(response.Messages));
+    //       startRoom(response.Users);
+    //     });
+    //   } else if (response.status === 401) {
+    //     setAnim(false);
+    //     setShowAuth(true);
+    //   }
+    // });
   };
 
   const authHandler = async (event: React.FormEvent<RoomFormAuthElement>) => {
@@ -108,10 +109,17 @@ const Room: React.FC = () => {
     if (formValues.username && formValues.password) {
       const rOptions = RequestOtions.Post(
         { username: formValues.username, password: formValues.password },
-        { "Content-Type": "application/json" }
+        {
+          "Content-Type": "application/json",
+          "X-Token": localStorage.getItem("x-token") || "",
+        }
       );
       await fetch(`/v1${ReqSettings.url}/auth`, rOptions).then((response) => {
         if (response.status === 200) {
+          localStorage.setItem(
+            "x-token",
+            response.headers.get("X-Token") || ""
+          );
           const newSession = response.headers.get("Cookie") || "";
           document.cookie = `session=${newSession.slice(8)}`;
           setShowAuth(false);

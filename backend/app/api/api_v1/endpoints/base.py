@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, Request
+from fastapi import APIRouter, status, Request, HTTPException
 from fastapi.responses import JSONResponse
 from schemes.room import RoomReq
 from core.tools import parser, encoder, database
@@ -16,27 +16,17 @@ async def home(request: Request):
 
 @router.post("/")
 async def create_room(room: RoomReq):
-    plainName, plainPassword = parser.parse_room_data(room)
-    hashed_name = encoder.hash_name(plainName)
-    hashed_password = encoder.hash_password(plainPassword)
-    link = encoder.gen_hash_link(hashed_name)
-    if hashed_password:
-        database.create_room(hashed_name, hashed_password)
-        sessionCookie = encoder.encode_session(
-            hashed_name, plainPassword, "Admin", encoder.key, encoder.hash_name("Admin")
-        )
-        return JSONResponse(
-            status_code=status.HTTP_201_CREATED,
-            content={"link": f"/rooms/{link}"},
-            headers={
-                "Content-Type": "application/json",
-                "Cookie": f"session={sessionCookie}",
-            },
-        )
+    h_name, h_pswd = encoder.hash_room_data(room)
+    room = database.create_room(h_name, h_pswd)
+    user = database.create_user("Admin", True, room)
+    link = encoder.gen_hash_link(h_name)
+    sessionCookie = encoder.encode_session(h_name, user.id, room.id, True, encoder.key)
     return JSONResponse(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        content={"error": "Elliot hates when the password is too simple"},
+        status_code=status.HTTP_201_CREATED,
+        content={"link": f"/rooms/{link}"},
         headers={
             "Content-Type": "application/json",
+            "Cookie": f"session={sessionCookie}",
+            "X-Token": encoder.hash_text("Admin"),
         },
     )

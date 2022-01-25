@@ -9,4 +9,3 @@ class RoomReq(BaseModel):
 class RoomAuth(BaseModel):
     username: str
     password: str
-

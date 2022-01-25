@@ -1,30 +1,17 @@
-from os import stat
-import re
 import jwt
-from passlib.context import CryptContext
-from cryptography.fernet import Fernet
-from fastapi.responses import JSONResponse
-from fastapi import status, HTTPException
 from time import time
 from core.config import settings
+from passlib.context import CryptContext
+from cryptography.fernet import Fernet
+from fastapi import status, HTTPException
 from jwt.exceptions import DecodeError
-
-
-class Validate:
-    def __init__(self) -> None:
-        self.pattern_password: re = re.compile(
-            r"^(?=.*[0-9].*)(?=.*[a-z].*)(?=.*[A-Z].*)[0-9a-zA-Z$%!#^]{8,}$"
-        )
-
-    def password(self, password) -> bool:
-        return self.pattern_password.match(password)
+from fastapi.encoders import jsonable_encoder as pydantic_decoder
 
 
 class Encoder:
     def __init__(self, sessionKey: str, sessionAlg: str = "HS256") -> None:
-        self.context = CryptContext(schemes=["bcrypt"])
-        self.validate = Validate()
-        self.sessionKey = sessionKey
+        self._context = CryptContext(schemes=["bcrypt"])
+        self._sessionKey = sessionKey
         self.sessionAlg = sessionAlg
 
     @property
@@ -32,95 +19,86 @@ class Encoder:
         key = Fernet.generate_key()
         return str(key, encoding="utf-8")
 
-    def gen_hash_link(self, name: str) -> str:
+    @staticmethod
+    def gen_hash_link(name: str) -> str:
         return name.split("$")[-1].replace("/", "slash").replace("\\", "hsals")
 
-    def hash_password(self, password: str) -> str:
-        if self.validate.password(password):
-            return self.context.hash(password)
-        return False
+    def hash_text(self, text: str) -> str:
+        return self._context.hash(text)
 
-    def hash_name(self, name: str) -> str:
-        if name:
-            return self.context.hash(name)
+    def hash_room_data(self, data) -> tuple:
+        json_data = pydantic_decoder(data)
+        if json_data["password"] and json_data["name"]:
+            return (
+                self.hash_text(json_data["name"]),
+                self.hash_text(json_data["password"]),
+            )
+        raise HTTPException(
+            status=status.HTTP_400_BAD_REQUEST, detail={"Invalid room data!"}
+        )
 
     def encode_session(
         self,
-        roomName: str,
-        roomPassword: str,
-        username: str,
+        room_name: str,
+        user_id: int,
+        room_id: int,
+        admin: bool,
         msg_key: str,
-        x_token: str,
     ) -> str:
         return jwt.encode(
             payload={
-                "name": roomName,
-                "password": roomPassword,
-                "username": username,
+                "name": room_name,
+                "user_id": user_id,
+                "room_id": room_id,
+                "admin": admin,
                 "msg_key": msg_key,
-                "x_token": x_token,
                 "expires": time() + settings.JWT_TIME_LIVE,
             },
-            key=self.sessionKey,
+            key=self._sessionKey,
             algorithm=self.sessionAlg,
         )
 
 
 class Decoder:
-    def __init__(self, sessionKey: str, sessionAlg: str = "HS256") -> None:
-        self.context = CryptContext(schemes=["bcrypt"])
-        self.sessionKey = sessionKey
+    def __init__(self, _sessionKey: str, sessionAlg: str = "HS256") -> None:
+        self._context = CryptContext(schemes=["bcrypt"])
+        self._sessionKey = _sessionKey
         self.sessionAlg = sessionAlg
-        self.encoder = Encoder(sessionKey)
+        self.encoder = Encoder(_sessionKey)
 
     def decode_session(self, session: str) -> dict:
-        return dict(
-            jwt.decode(session, key=self.sessionKey, algorithms=self.sessionAlg)
-        )
+        try:
+            return jwt.decode(session, key=self._sessionKey, algorithms=self.sessionAlg)
+        except DecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"Unauthorized": "Session invalid"},
+            )
 
-    def verify_password(self, password: str, hashed_password: str) -> bool:
-        return self.context.verify(password, hashed_password)
-
-    def verify_name(self, name: str, hashed_name: str) -> bool:
-        return self.context.verify(name, hashed_name)
+    def verify_hash(self, plain_text: str, hashed_text: str) -> bool:
+        return self._context.verify(plain_text, hashed_text)
 
     def parse_session(self, session):
         decoded_session = self.decode_session(session)
         return (
             decoded_session["name"],
-            decoded_session["password"],
-            decoded_session["username"],
+            decoded_session["admin"],
             decoded_session["expires"],
         )
 
     def verify_session(
-        self, name: str, password: str, session: str, status: bool, admin: bool = False
+        self, name: str, session: str, status: bool, admin: bool = False
     ) -> bool:
-        if session:
-            try:
-                s_name, s_password, username, expires = self.parse_session(session)
-            except DecodeError:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail={"Unauthorized": "Session invalid"},
-                )
-            verify = (
-                s_name == name
-                and self.verify_password(s_password, password)
-                and status
-                and expires > time()
-            )
-            return verify and username == "Admin" if admin else verify
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"Unauthorized": "Session doesn't exist"},
-        )
+        s_name, admin, expires = self.parse_session(session)
+        verify = s_name == name and status and expires > time()
+        return verify and admin if admin else verify
 
     def session_add_key(self, session: str, msg_key: str) -> str:
         decoded_session = self.decode_session(session)
         return self.encoder.encode_session(
             decoded_session["name"],
-            decoded_session["password"],
-            decoded_session["username"],
+            decoded_session["user_id"],
+            decoded_session["room_id"],
+            decoded_session["admin"],
             msg_key,
         )

@@ -3,12 +3,12 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
     status,
-    Cookie,
+    HTTPException,
     Query,
     Header,
     Depends,
 )
-from fastapi.encoders import jsonable_encoder
+from fastapi.encoders import jsonable_encoder as pydantic_decoder
 from fastapi.responses import JSONResponse
 from typing import Optional
 from api.wsmanager import Room, Connection
@@ -17,6 +17,7 @@ from schemes.user import UserBlock
 from core.tools import manager, parser, encoder, decoder, database
 from core.config import settings
 from pydantic import BaseModel
+from time import time
 
 router = APIRouter()
 from fastapi_csrf_protect import CsrfProtect
@@ -37,27 +38,30 @@ def get_csrf_config():
 async def room_password_auth(
     name: str, auth: RoomAuth, x_token: Optional[str] = Header(None)
 ):
-    data = jsonable_encoder(auth)
+    data = pydantic_decoder(auth)
     username, password = data["username"], data["password"]
     hased_name = parser.parse_link_hash(name)
     room = database.get_room_by_name(hased_name)
-    if decoder.verify_password(password, room.password):
-        if database.check_user(username, room.id):
-            database.create_user(username, False, room.id)
-            sessionCookie = encoder.encode_session(
-                hased_name, password, username, "", encoder.hash_name(username)
-            )
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={"User": data["username"]},
-                headers={
-                    "Content-Type": "application/json",
-                    "Cookie": f"session={sessionCookie}",
-                },
-            )
-    return JSONResponse(
+    if decoder.verify_hash(password, room.password):
+        if not decoder.verify_hash(username, x_token):
+            user = database.create_user(username, False, room.id)
+        else:
+            user = database.get_user_by_name(username, room.id)
+        sessionCookie = encoder.encode_session(
+            hased_name, user.id, room.id, user.admin, encoder.hash_text(username)
+        )
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"User": data["username"]},
+            headers={
+                "Content-Type": "application/json",
+                "Cookie": f"session={sessionCookie}",
+                "X-Token": encoder.hash_text(username),
+            },
+        )
+    raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        content={"Erorr": "Invalid password"},
+        detail={"Erorr": "Invalid password"},
         headers={"Content-Type": "application/json", "WWW-Authenticate": "Bearer"},
     )
 
@@ -69,8 +73,8 @@ async def room(
     csrf_protect: CsrfProtect = Depends(),
 ):
     hashed_name, room, user = parser.get_room_data(name, authorization)
-    if decoder.verify_session(hashed_name, room.password, authorization, user.status):
-        enc_messages, messages = database.get_all_messages(room.id), []
+    if decoder.verify_session(hashed_name, authorization, user.status):
+        enc_messages, messages = database.get_all_messages(room), []
         for message in enc_messages:
             messages.append(
                 {
@@ -91,11 +95,12 @@ async def room(
                 "Content-Type": "application/json",
                 "Connection": "keep-alive",
                 "X-CSRF-Token": csrf_protect.generate_csrf(),
+                "X-Token": encoder.hash_text(user.name),
             },
         )
-    return JSONResponse(
+    raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        content={"Status": "Invalid session"},
+        detail={"Status": "Invalid session"},
         headers={
             "Content-Type": "application/json",
             "WWW-Authenticate": "Bearer",
@@ -117,8 +122,8 @@ async def delete_room(name: str, authorization: Optional[str] = Header(None)):
                 "Location": "/",
             },
         )
-    return JSONResponse(
-        status_code=status.HTTP_403_FORBIDDEN, content={"User not admin"}
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN, detail={"User not admin"}
     )
 
 
@@ -127,7 +132,7 @@ async def block_room_user(
     name: str, user: UserBlock, authorization: Optional[str] = Header(None)
 ):
     hashed_name, room, user = parser.get_room_data(name, authorization)
-    username = jsonable_encoder(user)["username"]
+    username = pydantic_decoder(user)["username"]
     if decoder.verify_session(
         hashed_name, room.password, authorization, user.status, True
     ):
@@ -136,8 +141,8 @@ async def block_room_user(
             status_code=status.HTTP_200_OK,
             content={"Status": "User has been blocked"},
         )
-    return JSONResponse(
-        status_code=status.HTTP_403_FORBIDDEN, content={"Status": "User not admin"}
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN, detail={"Status": "User not admin"}
     )
 
 
@@ -146,7 +151,7 @@ async def websocket_endpoint(
     websocket: WebSocket, name: str, session: Optional[str] = Query(None)
 ):
     hashed_name, room_obj, user = parser.get_room_data(name, session)
-    if decoder.verify_session(hashed_name, room_obj.password, session, user.status):
+    if decoder.verify_session(hashed_name, session, user.status):
         manager.append_room(name, Room(name))
         connection = Connection(user.name, websocket)
         try:
