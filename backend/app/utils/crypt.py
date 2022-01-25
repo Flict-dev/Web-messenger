@@ -6,6 +6,7 @@ from cryptography.fernet import Fernet
 from fastapi import status, HTTPException
 from jwt.exceptions import DecodeError
 from fastapi.encoders import jsonable_encoder as pydantic_decoder
+from passlib.exc import UnknownHashError
 
 
 class Encoder:
@@ -24,7 +25,13 @@ class Encoder:
         return name.split("$")[-1].replace("/", "slash").replace("\\", "hsals")
 
     def hash_text(self, text: str) -> str:
-        return self._context.hash(text)
+        try:
+            return self._context.hash(text)
+        except UnknownHashError:
+            raise HTTPException(
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={"Status", "Invalid hash"},
+            )
 
     def hash_room_data(self, data) -> tuple:
         json_data = pydantic_decoder(data)

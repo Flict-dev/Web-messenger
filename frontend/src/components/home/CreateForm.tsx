@@ -30,7 +30,8 @@ const CreateForm: React.FC = () => {
 
       await fetch("/v1/", rOptions).then((response) => {
         if (response.ok) {
-          document.cookie = response.headers.get("Cookie") || "";
+          const newSession = response.headers.get("Cookie") || "";
+          document.cookie = `session=${newSession.slice(8)}`;
           response.json().then((response) => {
             setForm(false);
             setPath(response.link);

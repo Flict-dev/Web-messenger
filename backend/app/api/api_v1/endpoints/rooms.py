@@ -43,10 +43,15 @@ async def room_password_auth(
     hased_name = parser.parse_link_hash(name)
     room = database.get_room_by_name(hased_name)
     if decoder.verify_hash(password, room.password):
-        if not decoder.verify_hash(username, x_token):
-            user = database.create_user(username, False, room.id)
+        if x_token:
+            if decoder.verify_hash(username, x_token):
+                user = database.get_user_by_name(username, room.id)
+            raise HTTPException(
+                status=status.HTTP_400_BAD_REQUEST,
+                detail={"Status": "Invalid username"}
+            )
         else:
-            user = database.get_user_by_name(username, room.id)
+            user = database.create_user(username, False, room)
         sessionCookie = encoder.encode_session(
             hased_name, user.id, room.id, user.admin, encoder.hash_text(username)
         )

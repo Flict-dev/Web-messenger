@@ -77,26 +77,9 @@ const Room: React.FC = () => {
         startRoom(response.data.Users);
       })
       .catch((error) => {
-        console.log(error)
         setAnim(false);
         setShowAuth(true);
       });
-
-    // await fetch(`/v1${ReqSettings.url}`, rOptions).then((response) => {
-    //   if (response.status === 200) {
-    //     setCsrf(response.headers.get("X-CSRF-Token") || "");
-    //     localStorage.setItem("x-token", response.headers.get("X-Token") || "");
-    //     response.json().then((response) => {
-    //       setName(response.User);
-    //       setMessages(response.Messages);
-    //       setMessages(decodeMessages(response.Messages));
-    //       startRoom(response.Users);
-    //     });
-    //   } else if (response.status === 401) {
-    //     setAnim(false);
-    //     setShowAuth(true);
-    //   }
-    // });
   };
 
   const authHandler = async (event: React.FormEvent<RoomFormAuthElement>) => {
@@ -122,7 +105,6 @@ const Room: React.FC = () => {
           );
           const newSession = response.headers.get("Cookie") || "";
           document.cookie = `session=${newSession.slice(8)}`;
-          setShowAuth(false);
           window.location.reload();
         } else if (response.status === 401) {
           response.json().then((response) => {

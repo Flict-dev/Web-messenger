@@ -25,7 +25,6 @@ class Room:
 
     async def connect(self, connection: Connection) -> None:
         await connection.websocket.accept()
-        print(self.connections)
         connection.time = self._parser.parse_msg_time(str(datetime.now()))
         await self.send_connections(connection)
         await self.broadcast(201, f"{connection.name} joined chat", connection.name)
@@ -60,17 +59,13 @@ class RoomsManager:
     def __init__(self) -> None:
         self.rooms = {}
 
-    def get_room_by_name(self, name: str) -> Room:
-        return self.rooms[name]
-
     def append_room(self, name: str, room: Room) -> None:
         if name not in self.rooms.keys():
             self.rooms[name] = room
 
     def append_room_connection(self, name: str, connection: Connection) -> None:
         room = self.rooms[name]
-        connection_names = list(map(lambda x: x.name, room.connections))
-        if connection.name not in connection_names:
+        if connection.name not in list(map(lambda x: x.name, room.connections)):
             room.connections.append(connection)
         else:
             room.connections.remove(connection)
@@ -86,5 +81,5 @@ class RoomsManager:
             del self.rooms[name]
 
     def delete_connections(self, name: str) -> None:
-        room = self.get_room_by_name(name)
+        room = self.rooms[name]
         room.connections = []
