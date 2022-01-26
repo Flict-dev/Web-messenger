@@ -7,6 +7,7 @@ import { RequestOtions } from "../../utils/reuests";
 import { Form } from "./Form";
 import { FormRes } from "./FormRes";
 import { FormError } from "../errors/FormError";
+import axios from "axios";
 
 const CreateForm: React.FC = () => {
   const [showForm, setForm] = useState<Boolean>(true);
@@ -23,31 +24,31 @@ const CreateForm: React.FC = () => {
       password: form.elements.roomPassword.value,
     };
     if (formValues.name && formValues.password) {
-      const rOptions = RequestOtions.Post(
-        { name: formValues.name, password: formValues.password },
-        { "Content-Type": "application/json" }
-      );
-
-      await fetch("/v1/", rOptions).then((response) => {
-        if (response.ok) {
-          const newSession = response.headers.get("Cookie") || "";
-          document.cookie = `session=${newSession.slice(8)}`;
-          response.json().then((response) => {
-            setForm(false);
-            setPath(response.link);
-            setRes(true);
-          });
-        } else {
-          response.json().then((response) => {
-            setErrorMsg(response.error);
-            setShow(true);
-            setTimeout((): void => {
-              setShow(false);
-              setErrorMsg("");
-            }, 3000);
-          });
-        }
+      const rOptions = RequestOtions.Post({
+        "Content-Type": "application/json",
       });
+
+      await axios
+        .post(
+          "/v1/",
+          { name: formValues.name, password: formValues.password },
+          rOptions
+        )
+        .then((response) => {
+          const newSession = response.headers["cookie"] || "";
+          document.cookie = `session=${newSession.slice(8)}`;
+          setForm(false);
+          setPath(response.data.link);
+          setRes(true);
+        })
+        .catch((error) => {
+          setErrorMsg(error);
+          setShow(true);
+          setTimeout((): void => {
+            setShow(false);
+            setErrorMsg("");
+          }, 3000);
+        });
     } else {
       setErrorMsg("Room name or password can't be empty");
       setShow(true);

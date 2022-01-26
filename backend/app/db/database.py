@@ -120,8 +120,9 @@ class Database(DatabaseGet):
     def create_message(self, message, user: Users) -> bool:
         messagesTable = self.get_table("Messages")
         with self.session as session:
+            session.expire_on_commit = False
             message = messagesTable(data=message, user_id=user.id, user_name=user.name)
-            user.messages.append(message)
+            session.add(message)
             session.commit()
             return message
 

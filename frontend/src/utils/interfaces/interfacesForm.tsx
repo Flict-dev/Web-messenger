@@ -22,3 +22,10 @@ interface FormAuthElements extends HTMLFormControlsCollection {
 export interface RoomFormAuthElement extends HTMLFormElement {
   readonly elements: FormAuthElements;
 }
+
+interface FormMsgElements extends HTMLFormControlsCollection {
+  roomMessage: HTMLInputElement;
+}
+export interface RoomFormAuthElement extends HTMLFormElement {
+  readonly element: FormMsgElements;
+}

@@ -7,11 +7,10 @@ namespace RequestOtions {
     };
     return getOptions;
   }
-  export function Post(body: object, headers: object):object {
+  export function Post(headers: object):object {
     const postOptions = {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify(body),
       credentials: 'same-origin'
       
     };

@@ -46,10 +46,11 @@ async def room_password_auth(
         if x_token:
             if decoder.verify_hash(username, x_token):
                 user = database.get_user_by_name(username, room.id)
-            raise HTTPException(
-                status=status.HTTP_400_BAD_REQUEST,
+            else:
+                raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"Status": "Invalid username"}
-            )
+                )
         else:
             user = database.create_user(username, False, room)
         sessionCookie = encoder.encode_session(
@@ -165,7 +166,7 @@ async def websocket_endpoint(
             try:
                 while True:
                     data = await websocket.receive_json()
-                    database.create_message(data["message"], user.id, user.name)
+                    database.create_message(data["message"], user)
                     await room.broadcast(200, data["message"], user.name)
             except WebSocketDisconnect:
                 await room.disconnect(connection)

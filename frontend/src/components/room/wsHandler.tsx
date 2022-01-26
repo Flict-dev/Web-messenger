@@ -1,3 +1,4 @@
+import { type } from "os";
 import { sortUsers } from "../../utils/helpers";
 
 import {
@@ -66,4 +67,16 @@ const wsHandler = {
   },
 };
 
+type WsData = {
+  status: number;
+  username: string;
+  message: string;
+};
+export const SendMessage = (ws: WebSocket, data: WsData) => {
+  try {
+    ws.send(JSON.stringify(data));
+  } catch (error) {
+    console.log(error);
+  }
+};
 export default wsHandler;

@@ -28,7 +28,9 @@
   height: 100%;
 }
 .msg_input {
-  width: 60%;
+  width: 100%;
+  outline: #fff !important;
+  margin-right: 20px;
 }
 
 .user_ad_name_wrapper {
@@ -148,6 +150,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 94%;
+  margin: 0 auto;
+  margin-top: 10px;
 }
 .chat {
   height: 100%;
@@ -174,6 +179,7 @@
 .msg_input,
 .msg_btn {
   box-shadow: 0 0 5px #131313;
+  border: 1.5px solid #676767;
 }
 .r_user_container {
   background: #333333;
@@ -196,7 +202,31 @@
   position: relative;
   top: 80px;
 }
-.load_err_t{
+.load_err_t {
   position: relative;
-  top: 20px
+  top: 20px;
+}
+.messages_wrapper {
+  height: 70vh;
+  padding: 20px;
+  border-radius: 4px;
+  border: 1.2px solid #0000;
+  background-color: #131313;
+  margin: 0 auto;
+  width: 90%;
+}
+.msg_btn {
+  color: #676767;
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+}
+.msg_btn:hover {
+  color: #c6c6c6;
+  border: 1.2px solid #c6c6c6;
+}
+
+.auth_form_wrapper {
+  height: 100%;
+  margin: 0 auto;
+  margin-top: 350px;
 }

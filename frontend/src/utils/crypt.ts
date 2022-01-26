@@ -21,4 +21,12 @@ const decodeMessages: Function = (
   return encryptedMessages;
 };
 
-export { decodeMessages };
+const encodeMessage: Function = (message: string): string => {
+  let CryptoJS = require("crypto-js");
+  const session: Session = jwt_decode(getCookie("session"));
+  let encrypted = CryptoJS.AES.encrypt(message, session.msg_key)
+  return encrypted.toString()
+}
+
+export { decodeMessages, encodeMessage };
+ 
