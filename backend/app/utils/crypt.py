@@ -1,3 +1,4 @@
+from re import S
 import jwt
 from time import time
 from core.config import settings
@@ -109,3 +110,7 @@ class Decoder:
             decoded_session["admin"],
             msg_key,
         )
+
+    def get_key(self, session: str) -> str:
+        d_session = self.decode_session(session)
+        return d_session["msg_key"]

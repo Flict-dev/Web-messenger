@@ -22,7 +22,13 @@ import ChatMessages from "./chat/ChatMessages";
 namespace ReqSettings {
   export const url = document.location.pathname;
   export const session = getCookie("session");
-  export const decodedSession: Session = jwt_decode(session);
+  export function decode_session(session: string): Session {
+    if (session !== "") {
+      return jwt_decode(session);
+    } else {
+      return { admin: false };
+    }
+  }
 }
 
 const Room: React.FC = () => {
@@ -32,14 +38,19 @@ const Room: React.FC = () => {
   const [animMsg, setAnimMsg] = useState<string>("Loading...");
   const [csrf, setCsrf] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [encryption, setEncryption] = useState<boolean>(false);
   const [showError, setShowError] = useState<boolean>(false);
   const [showAuth, setShowAuth] = useState<boolean>(false);
   const [erorrWs, setWsError] = useState<boolean>(false);
   const [showAnim, setAnim] = useState<boolean>(true);
   const [wsMsg, setWsMsg] = useState<WebSocket>();
   const inputEl = useRef<HTMLInputElement>(null);
+  const [inValue, setInValue] = useState<string>("");
 
-  const wsManager = (usersGet: Array<UserType>): void => {
+  const wsManager = (
+    usersGet: Array<UserType>,
+    messagesGet?: Array<MessageType>
+  ): void => {
     type wsResponse = {
       status: keyof typeof wsHandler;
       username?: string;
@@ -59,8 +70,13 @@ const Room: React.FC = () => {
       const response: wsResponse = JSON.parse(event.data);
       const hadnler = wsHandler[response.status];
       let result = hadnler(Object(response), usersGet);
-      setUsers(result.users);
-      setAnim(result.animation);
+      if (result.message) {
+        messagesGet?.push(result.message);
+        setMessages([...(messagesGet || [])]);
+      } else {
+        setUsers(result.users);
+        setAnim(result.animation);
+      }
     };
     setWsMsg(ws);
   };
@@ -76,30 +92,22 @@ const Room: React.FC = () => {
         setCsrf(response.headers["x-csrf-token"] || "");
         localStorage.setItem("x-token", response.headers["x-token"] || "");
         setName(response.data.User);
-        setMessages(decodeMessages(response.data.Messages));
-        wsManager(response.data.Users);
+        try {
+          const messagesGet = decodeMessages(response.data.Messages);
+          setMessages(messagesGet);
+          wsManager(response.data.Users, messagesGet);
+        } catch (error) {
+          setEncryption(true);
+          wsManager(response.data.Users, []);
+        }
       })
       .catch((error) => {
         setAnim(false);
+        setAnimMsg(error.message);
         setShowAuth(true);
       });
   };
 
-  const messageHandler: React.MouseEventHandler = async (
-    event: React.MouseEvent<HTMLInputElement>
-  ) => {
-    event.preventDefault();
-    if (inputEl.current?.value !== "") {
-      // @ts-ignore
-      SendMessage(wsMsg, {
-        status: 200,
-        username: username,
-        message: encodeMessage(inputEl.current?.value) || "",
-      });
-      // @ts-ignore
-      inputEl.current.value  = ''
-    }
-  };
   const authHandler = async (event: React.FormEvent<RoomFormAuthElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -108,6 +116,8 @@ const Room: React.FC = () => {
       password: form.elements.roomPassword.value,
     };
     if (formValues.username && formValues.password) {
+      setAnim(true);
+      setAnimMsg("Authorization");
       const rOptions = RequestOtions.Post({
         "Content-Type": "application/json",
         "X-Token": localStorage.getItem("x-token") || "",
@@ -143,6 +153,36 @@ const Room: React.FC = () => {
     }
   };
 
+  const sendInputValue = () => {
+    if (inValue !== "") {
+      // @ts-ignore
+      SendMessage(wsMsg, {
+        status: 200,
+        username: username,
+        message: encodeMessage(inValue) || "",
+      });
+      // @ts-ignore
+      inputEl.current.value = "";
+    }
+  };
+
+  const messageHandler: React.MouseEventHandler = async (
+    event: React.MouseEvent<HTMLInputElement>
+  ) => {
+    event.preventDefault();
+    sendInputValue();
+  };
+  const keyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter"){
+      sendInputValue()
+      setInValue('');
+    }
+  };
+
+  const changeHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setInValue(event.currentTarget.value);
+  };
+
   useEffect(() => {
     initialRequest();
   }, []);
@@ -161,7 +201,7 @@ const Room: React.FC = () => {
       ) : (
         <div className="container">
           <div className="user_container">
-            {ReqSettings.decodedSession["admin"] ? (
+            {ReqSettings.decode_session(ReqSettings.session)["admin"] ? (
               <AdminPanel
                 users={users.filter((user) => user.name !== "Admin")}
               />
@@ -172,7 +212,11 @@ const Room: React.FC = () => {
           <div className="msg_container">
             <div className="chat">
               <div className="messages_wrapper">
-                <ChatMessages messages={messages} name={username} />
+                {encryption ? (
+                  <h3 className="not_key">You don't have an encryption key</h3>
+                ) : (
+                  <ChatMessages messages={messages} name={username} />
+                )}
               </div>
               <div className="send_wrapper">
                 <input
@@ -180,6 +224,8 @@ const Room: React.FC = () => {
                   className="msg_input"
                   id="msg_input"
                   placeholder="message"
+                  onChange={changeHandler}
+                  onKeyPress={keyPress}
                   ref={inputEl}
                 />
                 <input

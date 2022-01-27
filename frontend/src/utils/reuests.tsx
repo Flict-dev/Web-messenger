@@ -1,9 +1,8 @@
 namespace RequestOtions {
   export function Get(headers: object):object {
     const getOptions = {
-      method: 'Get',
+      method: 'GET',
       headers: headers,
-      credentials: 'same-origin',
     };
     return getOptions;
   }
@@ -11,8 +10,6 @@ namespace RequestOtions {
     const postOptions = {
       method: 'POST',
       headers: headers,
-      credentials: 'same-origin'
-      
     };
     return postOptions;
   }

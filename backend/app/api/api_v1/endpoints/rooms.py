@@ -1,3 +1,4 @@
+from re import M
 from fastapi import (
     APIRouter,
     WebSocket,
@@ -36,8 +37,12 @@ def get_csrf_config():
 
 @router.post("/{name}/auth")
 async def room_password_auth(
-    name: str, auth: RoomAuth, x_token: Optional[str] = Header(None)
-):
+    name: str,
+    auth: RoomAuth,
+    x_token: Optional[str] = Header(None),
+    authorization: Optional[str] = Header(None),
+):    
+    msg_key = decoder.get_key(authorization) if authorization else ''
     data = pydantic_decoder(auth)
     username, password = data["username"], data["password"]
     hased_name = parser.parse_link_hash(name)
@@ -48,17 +53,17 @@ async def room_password_auth(
                 user = database.get_user_by_name(username, room.id)
             else:
                 raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"Status": "Invalid username"}
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={"Status": "Invalid username"},
                 )
         else:
             user = database.create_user(username, False, room)
         sessionCookie = encoder.encode_session(
-            hased_name, user.id, room.id, user.admin, encoder.hash_text(username)
+            hased_name, user.id, room.id, user.admin, msg_key
         )
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={"User": data["username"]},
+            content={"User": username},
             headers={
                 "Content-Type": "application/json",
                 "Cookie": f"session={sessionCookie}",
@@ -92,7 +97,6 @@ async def room(
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
-                "Status": 200,
                 "User": user.name,
                 "Messages": messages,
                 "Users": parser.parse_room_users(list(room.users)),
@@ -166,8 +170,9 @@ async def websocket_endpoint(
             try:
                 while True:
                     data = await websocket.receive_json()
-                    database.create_message(data["message"], user)
-                    await room.broadcast(200, data["message"], user.name)
+                    if data['message']:
+                        database.create_message(data["message"], user)
+                        await room.broadcast(200, data["message"], user.name)
             except WebSocketDisconnect:
                 await room.disconnect(connection)
                 manager.close_room(name)

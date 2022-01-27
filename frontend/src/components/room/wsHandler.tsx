@@ -1,8 +1,10 @@
 import { type } from "os";
 import { sortUsers } from "../../utils/helpers";
-
+import { decodeMessages } from "../../utils/crypt";
 import {
+  MessageType,
   UserType,
+  wsRequest200,
   wsRequest201,
   wsRequest202,
   wsRequest203,
@@ -11,6 +13,7 @@ import {
 type Response = {
   users: Array<UserType>;
   animation: boolean;
+  message?: MessageType;
 };
 
 const response: Response = {
@@ -19,8 +22,15 @@ const response: Response = {
 };
 
 const wsHandler = {
-  200: (r: object): Response => {
-    console.log(r, "plain text");
+  200: (r: wsRequest200): Response => {
+    console.log(r);
+    const encMessage: MessageType = {
+      Message: r.message,
+      Created_at: r.time,
+      Username: r.username,
+      current: false,
+    };
+    response.message = decodeMessages(Array(encMessage))[0];
     return response;
   },
 

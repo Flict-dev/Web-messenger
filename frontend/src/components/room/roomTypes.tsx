@@ -14,10 +14,17 @@ export type MessageType = {
   current?: boolean;
 };
 
+export type wsRequest200 = {
+  status: number;
+  username: string;
+  message: string;
+  time: string;
+};
+
 export type wsRequest201 = {
   status: number;
   username: string;
-  messgae: string;
+  message: string;
   time: string;
 };
 
@@ -25,7 +32,7 @@ export type wsRequest201 = {
 export type wsRequest202 = {
   status: number;
   username: string;
-  messgae: string;
+  message: string;
   time: string;
 };
 
@@ -35,12 +42,12 @@ export type wsRequest203 = {
 };
 
 export type Session = {
-  name: string;
-  user_id: number;
-  room_id: number;
+  name?: string;
+  user_id?: number;
+  room_id?: number;
   admin: boolean;
-  msg_key: string;
-  expires: number;
+  msg_key?: string;
+  expires?: number;
 };
 
 
