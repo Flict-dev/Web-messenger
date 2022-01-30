@@ -1,4 +1,7 @@
+from base64 import decode
+from email.mime import message
 from re import M
+from tkinter import N
 from fastapi import (
     APIRouter,
     WebSocket,
@@ -11,19 +14,20 @@ from fastapi import (
 )
 from fastapi.encoders import jsonable_encoder as pydantic_decoder
 from fastapi.responses import JSONResponse
-from typing import Optional
+from typing import Optional, Dict
 from api.wsmanager import Room, Connection
+from api.wshandler import WsHandler
 from schemes.room import RoomAuth
 from schemes.user import UserBlock
 from core.tools import manager, parser, encoder, decoder, database
 from core.config import settings
 from pydantic import BaseModel
-from time import time
-
-router = APIRouter()
+from db.create_tables import Users
 from fastapi_csrf_protect import CsrfProtect
 
 # from fastapi_csrf_protect.exceptions import CsrfProtectError
+
+router = APIRouter()
 
 
 class CsrfSettings(BaseModel):
@@ -41,8 +45,8 @@ async def room_password_auth(
     auth: RoomAuth,
     x_token: Optional[str] = Header(None),
     authorization: Optional[str] = Header(None),
-):    
-    msg_key = decoder.get_key(authorization) if authorization else ''
+):
+    msg_key = decoder.get_key(authorization) if authorization else ""
     data = pydantic_decoder(auth)
     username, password = data["username"], data["password"]
     hased_name = parser.parse_link_hash(name)
@@ -119,12 +123,16 @@ async def room(
 
 
 @router.delete("/{name}")  # ADD Csrf check
-async def delete_room(name: str, authorization: Optional[str] = Header(None)):
+async def delete_room(
+    name: str,
+    authorization: Optional[str] = Header(None),
+    csrf_token: Optional[str] = Header(None),
+    csrf_protect: CsrfProtect = Depends(),
+):
+    csrf_protect.validate_csrf(csrf_token)
     hashed_name, room, user = parser.get_room_data(name, authorization)
-    if decoder.verify_session(
-        hashed_name, room.password, authorization, user.status, True
-    ):
-        database.delete_room(room.id)
+    if decoder.verify_session(hashed_name, authorization, user.status, True):
+        database.delete_room(room)
         return JSONResponse(
             status_code=status.HTTP_204_NO_CONTENT,
             content={"Status": "Room has been deleted"},
@@ -137,42 +145,32 @@ async def delete_room(name: str, authorization: Optional[str] = Header(None)):
     )
 
 
-@router.patch("/{name}")  # ADD Csrf check
-async def block_room_user(
-    name: str, user: UserBlock, authorization: Optional[str] = Header(None)
-):
-    hashed_name, room, user = parser.get_room_data(name, authorization)
-    username = pydantic_decoder(user)["username"]
-    if decoder.verify_session(
-        hashed_name, room.password, authorization, user.status, True
-    ):
-        await database.block_user(username, room.id)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"Status": "User has been blocked"},
-        )
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN, detail={"Status": "User not admin"}
-    )
-
-
 @router.websocket("/{name}")
 async def websocket_endpoint(
     websocket: WebSocket, name: str, session: Optional[str] = Query(None)
 ):
     hashed_name, room_obj, user = parser.get_room_data(name, session)
     if decoder.verify_session(hashed_name, session, user.status):
+        decoded_session = decoder.decode_session(session)
         manager.append_room(name, Room(name))
-        connection = Connection(user.name, websocket)
+        connection = Connection(user.name, session, websocket)
         try:
             manager.append_room_connection(name, connection)
             room = await manager.connect_room(name, connection)
+            room_hadnler = WsHandler(room, connection)
             try:
                 while True:
                     data = await websocket.receive_json()
-                    if data['message']:
-                        database.create_message(data["message"], user)
-                        await room.broadcast(200, data["message"], user.name)
+                    hadnleFunc = room_hadnler.hadnlers(data["status"])
+                    await hadnleFunc(
+                        {
+                            "username": data["username"],
+                            "message": data["message"],
+                            "admin": decoded_session["admin"],
+                            "room": room_obj,
+                            "user": user,
+                        }
+                    )
             except WebSocketDisconnect:
                 await room.disconnect(connection)
                 manager.close_room(name)

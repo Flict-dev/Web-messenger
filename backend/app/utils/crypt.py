@@ -53,7 +53,7 @@ class Encoder:
         admin: bool,
         msg_key: str,
     ) -> str:
-        return jwt.encode(
+        session = jwt.encode(
             payload={
                 "name": room_name,
                 "user_id": user_id,
@@ -65,14 +65,15 @@ class Encoder:
             key=self._sessionKey,
             algorithm=self.sessionAlg,
         )
+        return session
 
 
 class Decoder:
-    def __init__(self, _sessionKey: str, sessionAlg: str = "HS256") -> None:
+    def __init__(self, sessionKey: str, sessionAlg: str = "HS256") -> None:
         self._context = CryptContext(schemes=["bcrypt"])
-        self._sessionKey = _sessionKey
+        self._sessionKey = sessionKey
         self.sessionAlg = sessionAlg
-        self.encoder = Encoder(_sessionKey)
+        self.encoder = Encoder(sessionKey)
 
     def decode_session(self, session: str) -> dict:
         try:
@@ -100,16 +101,6 @@ class Decoder:
         s_name, admin, expires = self.parse_session(session)
         verify = s_name == name and status and expires > time()
         return verify and admin if admin else verify
-
-    def session_add_key(self, session: str, msg_key: str) -> str:
-        decoded_session = self.decode_session(session)
-        return self.encoder.encode_session(
-            decoded_session["name"],
-            decoded_session["user_id"],
-            decoded_session["room_id"],
-            decoded_session["admin"],
-            msg_key,
-        )
 
     def get_key(self, session: str) -> str:
         d_session = self.decode_session(session)

@@ -6,7 +6,7 @@ const OnlineBlock: React.FC<{ user: UserType }> = ({ user }) => {
     return (
       <div className="status status_blocked">
         <p>
-          <span className="status_bl_t">Blocked</span>
+          <span className="status_bl_t">Banned</span>
         </p>
       </div>
     );

@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
@@ -17,7 +17,7 @@ class DtabaseHelper:
         self._decoder = Decoder(settings.SECRET_KEY)
 
     @property
-    def tables(self) -> list:
+    def tables(self) -> List[Table]:
         return list(self._metadata.tables.keys())
 
     @property
@@ -39,7 +39,7 @@ class DatabaseGet(DtabaseHelper):
     def __init__(self, path: str, echo: bool = False) -> None:
         super().__init__(path, echo)
 
-    def get_room_by_id(self, id: int) -> list:
+    def get_room_by_id(self, id: int) -> Rooms or HTTPException:
         roomTable = self.get_table("Rooms")
         with self.session as session:
             room = session.query(roomTable).where(roomTable.id == id).first()
@@ -49,7 +49,7 @@ class DatabaseGet(DtabaseHelper):
             )
         return room
 
-    def get_room_by_name(self, name: str) -> list:
+    def get_room_by_name(self, name: str) -> Rooms or HTTPException:
         roomTable = self.get_table("Rooms")
         with self.session as session:
             room = session.query(roomTable).where(roomTable.name == name).first()
@@ -59,7 +59,7 @@ class DatabaseGet(DtabaseHelper):
             )
         return room
 
-    def get_user_by_id(self, id: int) -> Users:
+    def get_user_by_id(self, id: int) -> Users or HTTPException:
         usersTable = self.get_table("Users")
         with self.session as session:
             user = session.query(usersTable).where(usersTable.id == id).first()
@@ -71,7 +71,7 @@ class DatabaseGet(DtabaseHelper):
 
     """ May be broken """
 
-    def get_user_by_name(self, username: str, room_id: int) -> Users:
+    def get_user_by_name(self, username: str, room_id: int) -> Users or HTTPException:
         room = self.get_room_by_id(room_id)
         names = list(map(lambda x: x.name, room.users))
         try:
@@ -83,7 +83,7 @@ class DatabaseGet(DtabaseHelper):
 
     """ May be broken """
 
-    def get_all_messages(self, room: Rooms):
+    def get_all_messages(self, room: Rooms) -> List[Messages]:
         users, messages = room.users, []
         for user in users:
             messages.extend(user.messages)
@@ -94,7 +94,7 @@ class Database(DatabaseGet):
     def __init__(self, path: str, echo: bool = False) -> None:
         super().__init__(path, echo)
 
-    def create_room(self, name: str, password: str) -> bool:
+    def create_room(self, name: str, password: str) -> Rooms or HTTPException:
         roomTable = self.get_table("Rooms")
         try:
             with self.session as session:
@@ -108,7 +108,7 @@ class Database(DatabaseGet):
                 status_code=status.HTTP_409_CONFLICT, detail="Room name not unique"
             )
 
-    def create_user(self, name: str, admin: bool, room: Rooms) -> bool:
+    def create_user(self, name: str, admin: bool, room: Rooms) -> Users:
         userTable = self.get_table("Users")
         with self.session as session:
             user = userTable(name=name, admin=admin, room_id=room.id)
@@ -117,7 +117,7 @@ class Database(DatabaseGet):
             session.commit()
             return user
 
-    def create_message(self, message, user: Users) -> bool:
+    def create_message(self, message, user: Users) -> Messages:
         messagesTable = self.get_table("Messages")
         with self.session as session:
             session.expire_on_commit = False
@@ -126,14 +126,13 @@ class Database(DatabaseGet):
             session.commit()
             return message
 
-    def delete_room(self, room: Rooms):
+    def delete_room(self, room: Rooms) -> None:
         with self.session as session:
             session.delete(room)
             session.commit()
 
-    def block_user(self, username: str, room_id: int):
+    def ban_user(self, user: Users) -> None:
         with self.session as session:
-            user = self.get_user_by_name(username, room_id)
             user.status = False
             session.add(user)
             session.commit()

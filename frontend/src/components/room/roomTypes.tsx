@@ -1,5 +1,3 @@
-
-
 export type UserType = {
   name: string;
   status: boolean;
@@ -14,22 +12,7 @@ export type MessageType = {
   current?: boolean;
 };
 
-export type wsRequest200 = {
-  status: number;
-  username: string;
-  message: string;
-  time: string;
-};
-
-export type wsRequest201 = {
-  status: number;
-  username: string;
-  message: string;
-  time: string;
-};
-
-
-export type wsRequest202 = {
+export type defaultWsRequest = {
   status: number;
   username: string;
   message: string;
@@ -49,5 +32,3 @@ export type Session = {
   msg_key?: string;
   expires?: number;
 };
-
-

@@ -1,14 +1,22 @@
 namespace RequestOtions {
-  export function Get(headers: object):object {
+  export function Get(headers: object): object {
     const getOptions = {
-      method: 'GET',
+      method: "GET",
       headers: headers,
     };
     return getOptions;
   }
-  export function Post(headers: object):object {
+  export function Post(headers: object): object {
     const postOptions = {
-      method: 'POST',
+      method: "POST",
+      headers: headers,
+    };
+    return postOptions;
+  }
+
+  export function Patch(headers: object): object {
+    const postOptions = {
+      method: "PATCH",
       headers: headers,
     };
     return postOptions;

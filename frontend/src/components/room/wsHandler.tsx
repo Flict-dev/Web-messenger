@@ -4,16 +4,28 @@ import { decodeMessages } from "../../utils/crypt";
 import {
   MessageType,
   UserType,
-  wsRequest200,
-  wsRequest201,
-  wsRequest202,
+  defaultWsRequest,
   wsRequest203,
 } from "./roomTypes";
+import { RequestOtions } from "../../utils/reuests";
 
-type Response = {
+export type Response = {
   users: Array<UserType>;
   animation: boolean;
   message?: MessageType;
+  session?: string;
+  username?: string;
+};
+
+type Result = {
+  typeWs: string;
+  response: Response;
+};
+
+type WsData = {
+  status: number;
+  username: string;
+  message: string;
 };
 
 const response: Response = {
@@ -22,7 +34,7 @@ const response: Response = {
 };
 
 const wsHandler = {
-  200: (r: wsRequest200): Response => {
+  200: (r: defaultWsRequest): Result => {
     console.log(r);
     const encMessage: MessageType = {
       Message: r.message,
@@ -31,39 +43,39 @@ const wsHandler = {
       current: false,
     };
     response.message = decodeMessages(Array(encMessage))[0];
-    return response;
+    return { typeWs: "message", response: response };
   },
 
-  201: (r: wsRequest201, usersGet: Array<UserType>): Response => {
+  201: (r: defaultWsRequest, usersGet: Array<UserType>): Result => {
     let index = usersGet.findIndex((user) => user.name === r.username);
     if (index >= 0) {
-      let c_user = usersGet[index];
-      c_user.online = true;
+      let current_user = usersGet[index];
+      current_user.online = true;
       response.users = [...sortUsers(usersGet)];
-      return response;
+      return { typeWs: "users", response: response };
     } else {
       usersGet.push({ name: r.username, status: true, online: true });
       response.users = [...sortUsers(usersGet)];
-      return response;
+      return { typeWs: "users", response: response };
     }
   },
 
-  202: (r: wsRequest202, usersGet: Array<UserType>): Response => {
+  202: (r: defaultWsRequest, usersGet: Array<UserType>): Result => {
     let index = usersGet.findIndex((user) => user.name === r.username);
     if (index >= 0) {
-      let c_user = usersGet[index];
-      c_user.online = false;
-      c_user.time = r.time;
+      let current_user = usersGet[index];
+      current_user.online = false;
+      current_user.time = r.time;
       localStorage.setItem(r.username, r.time);
       response.users = [...sortUsers(usersGet)];
-      return response;
+      return { typeWs: "users", response: response };
     } else {
       console.log("errror");
-      return response; // debug it
+      return { typeWs: "users", response: response }; // debug it
     }
   },
 
-  203: (r: wsRequest203, usersGet: Array<UserType>): Response => {
+  203: (r: wsRequest203, usersGet: Array<UserType>): Result => {
     usersGet.forEach((user) => {
       r.connections.forEach((connection) => {
         if (user.name === connection.name) {
@@ -73,15 +85,28 @@ const wsHandler = {
     });
     response.users = [...sortUsers(usersGet)];
     response.animation = false;
-    return response;
+    return { typeWs: "users", response: response };
+  },
+
+  206: (r: defaultWsRequest, usersGet: Array<UserType>): Result => {
+    response.session = r.message;
+    return { typeWs: "void", response: response };
+  },
+
+  207: (r: defaultWsRequest, usersGet: Array<UserType>): Result => {
+    response.animation = true;
+    return { typeWs: "ban", response: response };
+  },
+
+  208: (r: defaultWsRequest, usersGet: Array<UserType>): Result => {
+    let index = usersGet.findIndex((user) => user.name === r.username);
+    let current_user = usersGet[index];
+    current_user.status = false;
+    response.users = [...sortUsers(usersGet)];
+    return { typeWs: "users", response: response };
   },
 };
 
-type WsData = {
-  status: number;
-  username: string;
-  message: string;
-};
 export const SendMessage = (ws: WebSocket, data: WsData) => {
   try {
     ws.send(JSON.stringify(data));
