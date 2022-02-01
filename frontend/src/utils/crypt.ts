@@ -1,5 +1,5 @@
 import jwt_decode from "jwt-decode";
-import Message from "../components/room/Room";
+import { MessageType } from "../components/room/roomTypes";
 import { getCookie } from "./helpers";
 
 export type Session = {
@@ -9,9 +9,10 @@ export type Session = {
   msg_key: string;
 };
 
+
 const decodeMessages: Function = (
-  encryptedMessages: Array<typeof Message>
-): Array<typeof Message> => {
+  encryptedMessages: Array<MessageType>
+): Array<MessageType> => {
   let CryptoJS = require("crypto-js");
   const session: Session = jwt_decode(getCookie("session"));
   encryptedMessages.forEach((message) => {
@@ -21,4 +22,12 @@ const decodeMessages: Function = (
   return encryptedMessages;
 };
 
-export { decodeMessages };
+const encodeMessage: Function = (message: string): string => {
+  let CryptoJS = require("crypto-js");
+  const session: Session = jwt_decode(getCookie("session"));
+  let encrypted = CryptoJS.AES.encrypt(message, session.msg_key);
+  return encrypted.toString();
+};
+
+
+export { decodeMessages, encodeMessage};

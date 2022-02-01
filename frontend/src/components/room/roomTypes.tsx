@@ -1,5 +1,3 @@
-
-
 export type UserType = {
   name: string;
   status: boolean;
@@ -7,25 +5,17 @@ export type UserType = {
   time?: string;
 };
 
-export type Message = {
+export type MessageType = {
   Message: string;
   Created_at: string;
-  Status: boolean;
   Username: string;
+  current?: boolean;
 };
 
-export type wsRequest201 = {
+export type defaultWsRequest = {
   status: number;
   username: string;
-  messgae: string;
-  time: string;
-};
-
-
-export type wsRequest202 = {
-  status: number;
-  username: string;
-  messgae: string;
+  message: string;
   time: string;
 };
 
@@ -34,6 +24,11 @@ export type wsRequest203 = {
   connections: Array<UserType>;
 };
 
-
-export type RoomReq = {}
-
+export type Session = {
+  name?: string;
+  user_id?: number;
+  room_id?: number;
+  admin: boolean;
+  msg_key?: string;
+  expires?: number;
+};

@@ -1,237 +1,182 @@
+from base64 import decode
+from email.mime import message
+from re import M
+from tkinter import N
 from fastapi import (
     APIRouter,
     WebSocket,
     WebSocketDisconnect,
     status,
-    Cookie,
+    HTTPException,
+    Request,
     Query,
+    Header,
+    Depends,
+    
 )
-from fastapi.encoders import jsonable_encoder
+from fastapi.encoders import jsonable_encoder as pydantic_decoder
 from fastapi.responses import JSONResponse
-from typing import Optional
+from typing import Optional, Dict
 from api.wsmanager import Room, Connection
-from shemas.room import RoomAuth
-from shemas.user import UserBlock
-from shemas.msg_key import MsgKeysCreate
-from core.utils import manager, parser, encoder, decoder, database
+from api.wshandler import WsHandler
+from schemes.room import RoomAuth
+from schemes.user import UserBlock
+from core.tools import manager, parser, encoder, decoder, database
+from core.config import settings
+from pydantic import BaseModel
+from db.create_tables import Users
+from fastapi_csrf_protect import CsrfProtect
+# from fastapi_csrf_protect.exceptions import CsrfProtectError
 
 router = APIRouter()
 
 
+class CsrfSettings(BaseModel):
+    secret_key: str = settings.CSRF_SECRET_KEY
+
+
+@CsrfProtect.load_config
+def get_csrf_config():
+    return CsrfSettings()
+
+
 @router.post("/{name}/auth")
-async def room_password_auth(name: str, auth: RoomAuth):
-    hashed_name = parser.parse_link_hash(name)
-    json_data = jsonable_encoder(auth)
-    room = database.get_room_by_name(hashed_name)
-    password, username = json_data["password"], json_data["username"]
-    if decoder.verify_password(password, room.password):
-        if not database.check_user(username, room.id):
-            database.create_user(
-                {
-                    "name": username,
-                    "admin": False,
-                    "room_id": room.id,
-                },
-                room.id,
-            )
-            sessionCookie = encoder.encode_session(hashed_name, password, username, "")
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={"User": username},
-                headers={
-                    "Content-Type": "application/json",
-                    "Set-Cookie": f"session={sessionCookie}",
-                },
-            )
-    return JSONResponse(
+async def room_password_auth(
+    name: str,
+    auth: RoomAuth,
+    x_token: Optional[str] = Header(None),
+    authorization: Optional[str] = Header(None),
+):
+    msg_key = decoder.get_key(authorization) if authorization else ""
+    data = pydantic_decoder(auth)
+    username, password = data["username"], data["password"]
+    hased_name = parser.parse_link_hash(name)
+    room = database.get_room_by_name(hased_name)
+    if decoder.verify_hash(password, room.password):
+        if x_token:
+            if decoder.verify_hash(username, x_token):
+                user = database.get_user_by_name(username, room.id)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={"Status": "Invalid username"},
+                )
+        else:
+            user = database.create_user(username, False, room)
+        sessionCookie = encoder.encode_session(
+            hased_name, user.id, room.id, user.admin, msg_key
+        )
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"User": username},
+            headers={
+                "Content-Type": "application/json",
+                "Cookie": f"session={sessionCookie}",
+                "X-Token": encoder.hash_text(username),
+            },
+        )
+    raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        content={"Erorr": "Invalid password or username"},
-        headers={
-            "Content-Type": "application/json",
-        },
+        detail={"Erorr": "Invalid password"},
+        headers={"Content-Type": "application/json", "WWW-Authenticate": "Bearer"},
     )
 
 
 @router.get("/{name}")
-async def room(name: str, session: Optional[str] = Cookie(None)):
-    if session:
-        hashed_name = parser.parse_link_hash(name)
-        room = database.get_room_by_name(hashed_name)
-        decoded_session = decoder.decode_session(session)
-        user = database.get_user_by_name(decoded_session["username"], room.id)
-        if decoder.verify_session(hashed_name, room.password, session) and user.status:
-            encoded_messages, messages = database.get_all_messages(room.id), []
-            for message in encoded_messages:
-                messages.append(
-                    {
-                        "Message": message.data,
-                        "Created_at": parser.parse_msg_time(message.created_at),
-                        "Status": user.status,
-                        "Username": message.user_name,
-                    }
-                )
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={
-                    "Status": 200,
-                    "User": decoded_session["username"],
-                    "Messages": messages,
-                    "Users": list(
-                        map(
-                            lambda user: {
-                                "name": user.name,
-                                "status": user.status,
-                                "online": False,
-                            },
-                            room.users,
-                        )
-                    ),
-                },
-                headers={
-                    "Content-Type": "application/json",
-                    "Connection": "keep-alive",
-                },
-            )
-    return JSONResponse(
-        status_code=status.HTTP_302_FOUND,
-        content={"Unauthorized": "Session doesn't exist"},
-        headers={"Location": f"/rooms/{name}/auth", "Connection": "close"},
-    )
-
-
-@router.delete("/{name}")
-async def delete_room(name: str, session: Optional[str] = Cookie(None)):
-    if session:
-        hashed_name = parser.parse_link_hash(name)
-        room = database.get_room_by_name(hashed_name)
-        user = database.get_user_by_name(
-            decoder.decode_session(session)["username"], room.id
-        )
-        if (
-            decoder.verify_session(hashed_name, room.password, session, True)
-            and user.status
-        ):
-            database.delete_room(room.id)
-            return JSONResponse(
-                status_code=status.HTTP_302_FOUND,
-                content={"Status": "Room has been deleted"},
-                headers={
-                    "Location": "/",
-                },
-            )
-    return JSONResponse(
-        status_code=status.HTTP_302_FOUND,
-        content={"Unauthorized": "Session doesn't exist"},
-        headers={"Location": f"/rooms/{name}/auth", "Connection": "close"},
-    )
-
-
-@router.patch("/{name}")
-async def block_room_user(
-    name: str, user: UserBlock, session: Optional[str] = Cookie(None)
+async def room(
+    name: str,
+    authorization: Optional[str] = Header(None),
+    csrf_protect: CsrfProtect = Depends(),
 ):
-
-    if session:
-        hashed_name = parser.parse_link_hash(name)
-        room = database.get_room_by_name(hashed_name)
-        username = jsonable_encoder(user)["username"]
-        user = database.get_user_by_name(username, room.id)
-        if (
-            decoder.verify_session(hashed_name, room.password, session, True)
-            and user.status
-        ):
-            await database.block_user(username, room.id)
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={"Status": "User has been blocked"},
+    hashed_name, room, user = parser.get_room_data(name, authorization)
+    if decoder.verify_session(hashed_name, authorization, user.status):
+        enc_messages, messages = database.get_all_messages(room), []
+        for message in enc_messages:
+            messages.append(
+                {
+                    "Message": message.data,
+                    "Created_at": parser.parse_msg_time(message.created_at),
+                    "Username": message.user_name,
+                }
             )
-    return JSONResponse(
-        status_code=status.HTTP_302_FOUND,
-        content={"Unauthorized": "Session doesn't exist"},
-        headers={"Location": f"/rooms/{name}/auth", "Connection": "close"},
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "User": user.name,
+                "Messages": messages,
+                "Users": parser.parse_room_users(list(room.users)),
+            },
+            headers={
+                "Content-Type": "application/json",
+                "Connection": "keep-alive",
+                "X-CSRF-Token": csrf_protect.generate_csrf(),
+                "X-Token": encoder.hash_text(user.name),
+            },
+        )
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail={"Status": "Invalid session"},
+        headers={
+            "Content-Type": "application/json",
+            "WWW-Authenticate": "Bearer",
+        },
     )
 
 
-# @router.post("/{name}/key")
-# async def create_msg_key(
-#     name: str, keyData: MsgKeysCreate, session: Optional[str] = Cookie(None)
-# ):
-#     if session:
-#         hashed_name = parser.parse_link_hash(name)
-#         room = database.get_room_by_name(hashed_name)
-#         encoded_data = jsonable_encoder(keyData)
-#         user = database.get_user_by_name(
-#             decoder.decode_session(session)["username"], room.id
-#         )
-#         if (
-#             decoder.verify_session(hashed_name, room.password, session, True)
-#             and user.status
-#         ):
-#             database.create_msg_key(
-#                 room.id, encoded_data["destinied_for"], encoded_data["key"]
-#             )
-#             return JSONResponse(
-#                 content={"Status": "Msg created"}, status_code=status.HTTP_200_OK
-#             )
-#     return JSONResponse(
-#         status_code=status.HTTP_302_FOUND,
-#         content={"Unauthorized": "Session doesn't exist"},
-#         headers={"Location": f"/rooms/{name}/auth", "Connection": "close"},
-#     )
-
-
-# @router.delete("/{name}/key")
-# async def delete_msg_key(name: str, session: Optional[str] = Cookie(None)):
-#     if session:
-#         hashed_name = parser.parse_link_hash(name)
-#         room = database.get_room_by_name(hashed_name)
-#         decoded_session = decoder.decode_session(session)
-#         user = database.get_user_by_name(decoded_session["username"], room.id)
-#         if decoder.verify_session(hashed_name, room.password, session) and user.status:
-#             data = database.get_msg_key(room.id, decoded_session["username"])
-#             key_session = decoder.session_add_key(session, data.key)
-#             await database.delete_key(data.id)
-#             return JSONResponse(
-#                 status_code=status.HTTP_200_OK,
-#                 content={"Status": "The encryption key was received"},
-#                 headers={
-#                     "Set-Cookie": f"session={key_session}",
-#                 },
-#             )
-#     return JSONResponse(
-#         status_code=status.HTTP_302_FOUND,
-#         content={"Unauthorized": "Session doesn't exist"},
-#         headers={"Location": f"/rooms/{name}/auth", "Connection": "close"},
-#     )
+@router.delete("/{name}")  
+async def delete_room(
+    request: Request,
+    name: str,
+    authorization: Optional[str] = Header(None),
+    csrf_protect: CsrfProtect = Depends(),
+    
+):  
+    csrf_token = csrf_protect.get_csrf_from_headers(request.headers)
+    csrf_protect.validate_csrf(csrf_token)
+    hashed_name, room, user = parser.get_room_data(name, authorization)
+    if decoder.verify_session(hashed_name, authorization, user.status, True):
+        database.delete_room(room)
+        return JSONResponse(
+            status_code=status.HTTP_204_NO_CONTENT,
+            content={"Status": "Room has been deleted"},
+            headers={
+                "Location": "/",
+            },
+        )
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN, detail={"User not admin"}
+    )
 
 
 @router.websocket("/{name}")
 async def websocket_endpoint(
     websocket: WebSocket, name: str, session: Optional[str] = Query(None)
 ):
-    if session:
+    hashed_name, room_obj, user = parser.get_room_data(name, session)
+    if decoder.verify_session(hashed_name, session, user.status):
         decoded_session = decoder.decode_session(session)
-        username = decoded_session["username"]
-        hashed_name = parser.parse_link_hash(name)
-        room_obj = database.get_room_by_name(hashed_name)
-        user = database.get_user_by_name(username, room_obj.id)
-        if (
-            decoder.verify_session(hashed_name, room_obj.password, session)
-            and user.status
-        ):
-            manager.append_room(name, Room(name))
-            connection = Connection(username, websocket)
+        manager.append_room(name, Room(name))
+        connection = Connection(user.name, session, websocket)
+        try:
+            manager.append_room_connection(name, connection)
+            room = await manager.connect_room(name, connection)
+            room_hadnler = WsHandler(room, connection)
             try:
-                manager.append_room_connection(name, connection)
-                room = await manager.connect_room(name, connection)
-                try:
-                    while True:
-                        data = await websocket.receive_json()
-                        if database.create_message(data["message"], user.id, user.name):
-                            await room.broadcast(200, data["message"], username)
-                except WebSocketDisconnect:
-                    await room.disconnect(connection)
-                    manager.close_room(name)
-                    await room.broadcast(202, f"{username} left chat", username)
-            except RuntimeError:
-                manager.delete_connections(name)
+                while True:
+                    data = await websocket.receive_json()
+                    hadnleFunc = room_hadnler.hadnlers(data["status"])
+                    await hadnleFunc(
+                        {
+                            "username": data["username"],
+                            "message": data["message"],
+                            "admin": decoded_session["admin"],
+                            "room": room_obj,
+                            "user": user,
+                        }
+                    )
+            except WebSocketDisconnect:
+                await room.disconnect(connection)
+                manager.close_room(name)
+                await room.broadcast(202, f"{user.name} left chat", user.name)
+        except RuntimeError:
+            manager.delete_connections(name)

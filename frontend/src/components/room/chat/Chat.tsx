@@ -1,22 +1,15 @@
-import React from "react";
+// import React from "react";
 
-import { Message } from "../roomTypes";
+// import { MessageType } from "../roomTypes";
+// import ChatMessages from "./ChatMessages";
 
-const Chat: React.FC<{ messages: Array<Message> }> = ({ messages }) => {
-  return (
-    <div className="chat">
-      <div className="messages">{messages}</div>
-      <div className="send_wrapper">
-        <input
-          type="text"
-          className="msg_input"
-          id="msg_input"
-          placeholder="message"
-        />
-        <input type="submit" className="msg_btn" id="msg_btn" value="send" />
-      </div>
-    </div>
-  );
-};
+// const Chat: React.FC<{
+//   messages: Array<MessageType>;
+//   name: string;
+//   handler: React.MouseEventHandler<HTMLInputElement>;
+//   inRef: React  
+// }> = ({ messages, name, handler, inRef}) => {
+//   return 
+// };
 
-export default Chat;
+export {}

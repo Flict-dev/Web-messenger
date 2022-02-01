@@ -1,24 +1,19 @@
-import re
+from re import S
 import jwt
+from time import time
+from core.config import settings
 from passlib.context import CryptContext
 from cryptography.fernet import Fernet
-
-
-class Validate:
-    def __init__(self) -> None:
-        self.pattern_password: re = re.compile(
-            r"^(?=.*[0-9].*)(?=.*[a-z].*)(?=.*[A-Z].*)[0-9a-zA-Z$%!#^]{8,}$"
-        )
-
-    def password(self, password) -> bool:
-        return self.pattern_password.match(password)
+from fastapi import status, HTTPException
+from jwt.exceptions import DecodeError
+from fastapi.encoders import jsonable_encoder as pydantic_decoder
+from passlib.exc import UnknownHashError
 
 
 class Encoder:
     def __init__(self, sessionKey: str, sessionAlg: str = "HS256") -> None:
-        self.context = CryptContext(schemes=["bcrypt"])
-        self.validate = Validate()
-        self.sessionKey = sessionKey
+        self._context = CryptContext(schemes=["bcrypt"])
+        self._sessionKey = sessionKey
         self.sessionAlg = sessionAlg
 
     @property
@@ -26,79 +21,87 @@ class Encoder:
         key = Fernet.generate_key()
         return str(key, encoding="utf-8")
 
-    def gen_hash_link(self, name: str) -> str:
+    @staticmethod
+    def gen_hash_link(name: str) -> str:
         return name.split("$")[-1].replace("/", "slash").replace("\\", "hsals")
 
-    def hash_password(self, password: str) -> str:
-        if self.validate.password(password):
-            return self.context.hash(password)
-        return False
+    def hash_text(self, text: str) -> str:
+        try:
+            return self._context.hash(text)
+        except UnknownHashError:
+            raise HTTPException(
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={"Status", "Invalid hash"},
+            )
 
-    def hash_name(self, name: str) -> str:
-        if name:
-            return self.context.hash(name)
-        raise ValueError("name")
-
-    def encode_session(
-        self, roomName: str, roomPassword: str, username: str, msg_key: str
-    ) -> str:
-        return jwt.encode(
-            payload={
-                "name": roomName,
-                "password": roomPassword,
-                "username": username,
-                "msg_key": msg_key,
-            },
-            key=self.sessionKey,
-            algorithm=self.sessionAlg,
+    def hash_room_data(self, data) -> tuple:
+        json_data = pydantic_decoder(data)
+        if json_data["password"] and json_data["name"]:
+            return (
+                self.hash_text(json_data["name"]),
+                self.hash_text(json_data["password"]),
+            )
+        raise HTTPException(
+            status=status.HTTP_400_BAD_REQUEST, detail={"Invalid room data!"}
         )
 
-    def encrypt_message(self, message: str, msg_key: str) -> str:
-        encoded_msg = message.encode()
-        fernet = Fernet(msg_key)
-        return fernet.encrypt(encoded_msg)
+    def encode_session(
+        self,
+        room_name: str,
+        user_id: int,
+        room_id: int,
+        admin: bool,
+        msg_key: str,
+    ) -> str:
+        session = jwt.encode(
+            payload={
+                "name": room_name,
+                "user_id": user_id,
+                "room_id": room_id,
+                "admin": admin,
+                "msg_key": msg_key,
+                "expires": time() + settings.JWT_TIME_LIVE,
+            },
+            key=self._sessionKey,
+            algorithm=self.sessionAlg,
+        )
+        return session
 
 
 class Decoder:
     def __init__(self, sessionKey: str, sessionAlg: str = "HS256") -> None:
-        self.context = CryptContext(schemes=["bcrypt"])
-        self.sessionKey = sessionKey
+        self._context = CryptContext(schemes=["bcrypt"])
+        self._sessionKey = sessionKey
         self.sessionAlg = sessionAlg
         self.encoder = Encoder(sessionKey)
 
     def decode_session(self, session: str) -> dict:
-        return dict(
-            jwt.decode(session, key=self.sessionKey, algorithms=self.sessionAlg)
+        try:
+            return jwt.decode(session, key=self._sessionKey, algorithms=self.sessionAlg)
+        except DecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"Unauthorized": "Session invalid"},
+            )
+
+    def verify_hash(self, plain_text: str, hashed_text: str) -> bool:
+        return self._context.verify(plain_text, hashed_text)
+
+    def parse_session(self, session):
+        decoded_session = self.decode_session(session)
+        return (
+            decoded_session["name"],
+            decoded_session["admin"],
+            decoded_session["expires"],
         )
-
-    def verify_password(self, password: str, hashed_password: str) -> bool:
-        return self.context.verify(password, hashed_password)
-
-    def verify_name(self, name: str, hashed_name: str) -> bool:
-        return self.context.verify(name, hashed_name)
 
     def verify_session(
-        self, name: str, password: str, session: str, admin: bool = False
+        self, name: str, session: str, status: bool, admin: bool = False
     ) -> bool:
-        decoded_session = self.decode_session(session)
-        room_name, room_password = decoded_session["name"], decoded_session["password"]
-        if admin:
-            return (
-                room_name == name
-                and self.verify_password(room_password, password)
-                and decoded_session["username"] == "Admin"
-            )
-        return room_name == name and self.verify_password(room_password, password)
+        s_name, admin, expires = self.parse_session(session)
+        verify = s_name == name and status and expires > time()
+        return verify and admin if admin else verify
 
-    def session_add_key(self, session: str, msg_key: str) -> str:
-        decoded_session = self.decode_session(session)
-        return self.encoder.encode_session(
-            decoded_session["name"],
-            decoded_session["password"],
-            decoded_session["username"],
-            msg_key,
-        )
-
-    def dcrypt_message(self, encoded_msg: str, msg_key: str) -> str:
-        fernet = Fernet(msg_key)
-        return fernet.decrypt(encoded_msg)
+    def get_key(self, session: str) -> str:
+        d_session = self.decode_session(session)
+        return d_session["msg_key"]

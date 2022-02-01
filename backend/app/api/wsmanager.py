@@ -1,3 +1,5 @@
+from re import I
+from tkinter import N
 from fastapi import WebSocket
 from typing import List
 from datetime import datetime
@@ -7,11 +9,12 @@ from utils.helpers import Parser
 
 
 class Connection:
-    def __init__(self, name: str, websocket: WebSocket) -> None:
+    def __init__(self, name: str, session: str, websocket: WebSocket) -> None:
         self.name = name
         self.websocket = websocket
         self._parser = Parser()
         self.time = self._parser.parse_msg_time(str(datetime.now()))
+        self.session = session
 
 
 class Room:
@@ -23,6 +26,10 @@ class Room:
     def __str__(self):
         return self.name
 
+    @property
+    def named_connections(self) -> List:
+        return list(map(lambda x: {"name": x.name, "time": x.time}, self.connections))
+
     async def connect(self, connection: Connection) -> None:
         await connection.websocket.accept()
         connection.time = self._parser.parse_msg_time(str(datetime.now()))
@@ -32,33 +39,51 @@ class Room:
     async def broadcast(
         self, status: int = 200, message: str = "", username: str = ""
     ) -> None:
-        data = {
-            "status": status,
-            "username": username,
-            "message": message,
-            "time": self._parser.parse_msg_time(str(datetime.now())),
-        }
         for connection in self.connections:
-            await connection.websocket.send_json(data)
+            await connection.websocket.send_json({
+                "status": status,
+                "username": username,
+                "message": message,
+                "time": self._parser.parse_msg_time(str(datetime.now())),
+            })
 
-    async def disconnect(self, connection: Connection):
+    async def disconnect(self, connection: Connection) -> None:
         self.connections.remove(connection)
 
     async def send_connections(self, connection: Connection) -> None:
-        named_connections = list(map(lambda x: {'name': x.name, 'time': x.time}, self.connections))
-        data = {"status": 203, "connections": named_connections}
+        data = {"status": 203, "connections": self.named_connections}
         await connection.websocket.send_json(data)
+
+    async def send_key(self, connection, key) -> None:
+        await connection.websocket.send_json({
+            "status": 206,
+            "username": connection.name,
+            "message": key,
+            "time": self._parser.parse_msg_time(str(datetime.now())),
+        })
+            
+
+    async def ban_user(self, connection: Connection, message: str) -> None:
+        await connection.websocket.send_json({
+            "status": 207,
+            "username": connection.name,
+            "message": message,
+            "time": self._parser.parse_msg_time(str(datetime.now())),
+        })
+        await self.broadcast(208, message, connection.name)
 
     def give_status(self) -> bool:
         return len(self.connections) > 0
+
+    def get_connection(self, username: str) -> Connection:
+        for connection in self.connections:
+            if connection.name == username:
+                return connection
 
 
 class RoomsManager:
     def __init__(self) -> None:
         self.rooms = {}
-
-    def get_room_by_name(self, name: str) -> Room:
-        return self.rooms[name]
 
     def append_room(self, name: str, room: Room) -> None:
         if name not in self.rooms.keys():
@@ -66,8 +91,7 @@ class RoomsManager:
 
     def append_room_connection(self, name: str, connection: Connection) -> None:
         room = self.rooms[name]
-        connection_names = list(map(lambda x: x.name, room.connections))
-        if connection.name not in connection_names:
+        if connection.name not in list(map(lambda x: x.name, room.connections)):
             room.connections.append(connection)
 
     async def connect_room(self, name: str, connection: Connection) -> Room:
@@ -81,5 +105,5 @@ class RoomsManager:
             del self.rooms[name]
 
     def delete_connections(self, name: str) -> None:
-        room = self.get_room_by_name(name)
+        room = self.rooms[name]
         room.connections = []
