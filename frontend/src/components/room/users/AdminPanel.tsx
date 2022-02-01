@@ -15,8 +15,6 @@ const AdUser: React.FC<{
     event.preventDefault();
     banHandler(user.name);
   };
-
-  let userStatus: string = `user_status_${user.status}`;
   return (
     <div className="user_ad_wrapper">
       <div id={user.name} className="user_ad_name_wrapper">
@@ -44,7 +42,8 @@ const AdminPanel: React.FC<{
   users: Array<UserType>;
   shareHandler: Function;
   banHandler: Function;
-}> = ({ users, shareHandler, banHandler }) => {
+  deleteRoomHadnler: React.MouseEventHandler<HTMLInputElement>;
+}> = ({ users, shareHandler, banHandler, deleteRoomHadnler }) => {
   return (
     <div className="admin_panel">
       <div className="admin_panel_title">
@@ -65,7 +64,12 @@ const AdminPanel: React.FC<{
         })}
       </div>
       <div className="admin_panel_delete_r">
-        <input className="delte_r_btn" type="submit" value="Delete room" />
+        <input
+          className="delte_r_btn delete"
+          type="submit"
+          value="Delete room"
+          onClick={deleteRoomHadnler}
+        />
       </div>
     </div>
   );

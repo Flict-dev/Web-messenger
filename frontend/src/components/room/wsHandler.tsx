@@ -1,4 +1,3 @@
-import { type } from "os";
 import { sortUsers } from "../../utils/helpers";
 import { decodeMessages } from "../../utils/crypt";
 import {
@@ -7,7 +6,6 @@ import {
   defaultWsRequest,
   wsRequest203,
 } from "./roomTypes";
-import { RequestOtions } from "../../utils/reuests";
 
 export type Response = {
   users: Array<UserType>;
@@ -35,7 +33,6 @@ const response: Response = {
 
 const wsHandler = {
   200: (r: defaultWsRequest): Result => {
-    console.log(r);
     const encMessage: MessageType = {
       Message: r.message,
       Created_at: r.time,

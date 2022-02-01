@@ -15,11 +15,19 @@ namespace RequestOtions {
   }
 
   export function Patch(headers: object): object {
-    const postOptions = {
+    const patchOptions = {
       method: "PATCH",
       headers: headers,
     };
-    return postOptions;
+    return patchOptions;
+  }
+
+  export function Delete(headers: object): object {
+    const deleteOptions = {
+      method: "DELETE",
+      headers: headers,
+    };
+    return deleteOptions;
   }
 }
 

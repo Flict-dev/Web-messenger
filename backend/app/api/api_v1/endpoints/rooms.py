@@ -8,9 +8,11 @@ from fastapi import (
     WebSocketDisconnect,
     status,
     HTTPException,
+    Request,
     Query,
     Header,
     Depends,
+    
 )
 from fastapi.encoders import jsonable_encoder as pydantic_decoder
 from fastapi.responses import JSONResponse
@@ -24,7 +26,6 @@ from core.config import settings
 from pydantic import BaseModel
 from db.create_tables import Users
 from fastapi_csrf_protect import CsrfProtect
-
 # from fastapi_csrf_protect.exceptions import CsrfProtectError
 
 router = APIRouter()
@@ -122,13 +123,15 @@ async def room(
     )
 
 
-@router.delete("/{name}")  # ADD Csrf check
+@router.delete("/{name}")  
 async def delete_room(
+    request: Request,
     name: str,
     authorization: Optional[str] = Header(None),
-    csrf_token: Optional[str] = Header(None),
     csrf_protect: CsrfProtect = Depends(),
-):
+    
+):  
+    csrf_token = csrf_protect.get_csrf_from_headers(request.headers)
     csrf_protect.validate_csrf(csrf_token)
     hashed_name, room, user = parser.get_room_data(name, authorization)
     if decoder.verify_session(hashed_name, authorization, user.status, True):

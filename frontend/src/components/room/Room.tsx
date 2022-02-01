@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { getCookie, sortUsers } from "../../utils/helpers";
+import { getCookie } from "../../utils/helpers";
 import { RequestOtions } from "../../utils/reuests";
 import { decodeMessages, encodeMessage } from "../../utils/crypt";
 import { UserType, MessageType, Session } from "./roomTypes";
@@ -173,7 +173,23 @@ const Room: React.FC = () => {
       }, 3000);
     }
   };
-
+  const deleteRoomHadnler = (event: React.MouseEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    const rOptions = RequestOtions.Delete({
+      "Content-Type": "application/json",
+      Authorization: ReqSettings.session,
+      "X-CSRF-Token": csrf,
+    });
+    axios
+      .delete(`/v1${ReqSettings.url}`, rOptions)
+      .then((response) => {
+        console.log(response);
+        window.location.reload();
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  };
   const shareHandler = (userData: string) => {
     // @ts-ignore
     SendMessage(wsMsg, {
@@ -249,6 +265,7 @@ const Room: React.FC = () => {
                 users={users.filter((user) => user.name !== "Admin")}
                 shareHandler={shareHandler}
                 banHandler={banHandler}
+                deleteRoomHadnler={deleteRoomHadnler}
               />
             ) : (
               <RoomUser username={username} />
