@@ -1,7 +1,3 @@
-from base64 import decode
-from email.mime import message
-from re import M
-from tkinter import N
 from fastapi import (
     APIRouter,
     WebSocket,
@@ -12,7 +8,6 @@ from fastapi import (
     Query,
     Header,
     Depends,
-    
 )
 from fastapi.encoders import jsonable_encoder as pydantic_decoder
 from fastapi.responses import JSONResponse
@@ -26,7 +21,6 @@ from core.config import settings
 from pydantic import BaseModel
 from db.create_tables import Users
 from fastapi_csrf_protect import CsrfProtect
-# from fastapi_csrf_protect.exceptions import CsrfProtectError
 
 router = APIRouter()
 
@@ -123,14 +117,13 @@ async def room(
     )
 
 
-@router.delete("/{name}")  
+@router.delete("/{name}")
 async def delete_room(
     request: Request,
     name: str,
     authorization: Optional[str] = Header(None),
     csrf_protect: CsrfProtect = Depends(),
-    
-):  
+):
     csrf_token = csrf_protect.get_csrf_from_headers(request.headers)
     csrf_protect.validate_csrf(csrf_token)
     hashed_name, room, user = parser.get_room_data(name, authorization)
