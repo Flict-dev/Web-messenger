@@ -25,7 +25,7 @@ A small Web Messenger with **[End-to-End](https://en.wikipedia.org/wiki/End-to-e
 
 ## Quick Start
 - Git
- - clone repo
+  - clone repo
      ```bash 
       git clone https://github.com/Flict-dev/Web-messenger.git
       ```
