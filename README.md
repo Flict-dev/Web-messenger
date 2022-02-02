@@ -1,4 +1,4 @@
-# React + FastAPI | [![license](https://img.shields.io/github/license/peaceiris/actions-gh-pages.svg)](LICENSE)
+# React + FastAPI · [![license](https://img.shields.io/github/license/peaceiris/actions-gh-pages.svg)](LICENSE)
 
 <div>
 <img src="assets/fastapi-logo.png" alt="fastapi-logo" height="60" />
