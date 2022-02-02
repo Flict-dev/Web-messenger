@@ -24,6 +24,11 @@ A small Web Messenger with **[End-to-End](https://en.wikipedia.org/wiki/End-to-e
 - [Black](https://github.com/psf/black) (Python)
 
 ## Quick Start
+- Git
+ - clone repo
+     ```bash 
+      git clone https://github.com/Flict-dev/Web-messenger.git
+      ```
 - Run Backend
   - Create virtual environment <br>
      ```bash 
