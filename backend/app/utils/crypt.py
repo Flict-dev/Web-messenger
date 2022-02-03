@@ -1,4 +1,3 @@
-from re import S
 import jwt
 from time import time
 from core.config import settings

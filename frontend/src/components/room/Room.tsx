@@ -85,12 +85,12 @@ const Room: React.FC = () => {
       time: string;
     };
     const ws = new WebSocket(
-      `ws://192.168.1.45:8000/api/v1${ReqSettings.url}?session=${ReqSettings.session}`
+      `ws://web-messanger-backend/api/v1${ReqSettings.url}?session=${ReqSettings.session}`
     );
     ws.onopen = (e) => {};
     ws.onclose = (event: CloseEvent) => {
       setWsError(true);
-      setAnimMsg("Connection closed, session already exists");
+      setAnimMsg("Connection closed!");
     };
     ws.onmessage = (event: MessageEvent) => {
       const response: wsResponse = JSON.parse(event.data);
@@ -123,9 +123,14 @@ const Room: React.FC = () => {
         }
       })
       .catch((error) => {
-        setAnim(false);
-        setAnimMsg(error.message);
-        setShowAuth(true);
+        if (error.response.status === 404) {
+          setWsError(true);
+          setAnimMsg(`${error.response.data.detail}`);
+        } else if (error.response.status === 401) {
+          setAnim(false);
+          setAnimMsg(error.response.data.detail.Error);
+          setShowAuth(true);
+        }
       });
   };
 
@@ -157,12 +162,15 @@ const Room: React.FC = () => {
           window.location.reload();
         })
         .catch((error) => {
-          setErrorMsg(error);
-          setShowError(true);
-          setTimeout((): void => {
-            setShowError(false);
-            setErrorMsg("");
-          }, 3000);
+          if (error.response.status === 401) {
+            setAnim(false);
+            setErrorMsg(error.response.data.detail.Error);
+            setShowError(true);
+            setTimeout((): void => {
+              setShowError(false);
+              setErrorMsg("");
+            }, 3000);
+          }
         });
     } else {
       setErrorMsg("You'r name or password can't be empty");

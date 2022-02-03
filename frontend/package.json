@@ -48,7 +48,7 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://192.168.1.45:8000/api/",
+  "proxy": "http://web-messanger-backend/api/",
   "devDependencies": {
     "@types/jest": "^27.4.0",
     "@types/node": "^17.0.8",

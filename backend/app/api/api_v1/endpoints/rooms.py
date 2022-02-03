@@ -53,7 +53,7 @@ async def room_password_auth(
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={"Status": "Invalid username"},
+                    detail={"Status": "Invalid username or password"},
                 )
         else:
             user = database.create_user(username, False, room)
@@ -71,7 +71,7 @@ async def room_password_auth(
         )
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail={"Erorr": "Invalid password"},
+        detail={"Error": "Invalid username or password"},
         headers={"Content-Type": "application/json", "WWW-Authenticate": "Bearer"},
     )
 

@@ -1,17 +1,9 @@
-from fastapi import APIRouter, status, Request, HTTPException
+from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 from schemes.room import RoomReq
-from core.tools import parser, encoder, database
+from core.tools import encoder, database
 
 router = APIRouter()
-
-
-@router.get("/")
-async def home(request: Request):
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={"ip": f"{request.client.host}"},
-    )
 
 
 @router.post("/")

@@ -73,10 +73,5 @@ class MsgKeys(Base):
 
 
 if __name__ == "__main__":
-    import os
-
-    db_path = input("Enter db path: ")
-    engine = create_engine(f"sqlite:///{db_path}")
+    engine = create_engine(f"sqlite:///sqlite.db")
     Base.metadata.create_all(engine)
-    log_path = os.path.abspath(f"../{db_path}")
-    print(f"Tables have been created at {log_path}")

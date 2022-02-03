@@ -1,0 +1,15 @@
+version: '3.9'
+
+services:
+  web-messanger-backend:
+    container_name: web-messanger-backend
+    build: ./backend
+    ports:
+      - 8080:80
+    restart: always
+  web-messanger-frontend:
+    container_name: web-messanger-frontend
+    build: ./frontend
+    ports:
+      - 8000:3000
+    restart: always
