@@ -5,11 +5,27 @@ services:
     container_name: web-messanger-backend
     build: ./backend
     ports:
-      - 8080:80
+      - 8080:8000
     restart: always
+    networks:
+        app:
+            ipv4_address: 172.16.238.10 
+    
   web-messanger-frontend:
     container_name: web-messanger-frontend
     build: ./frontend
     ports:
       - 8000:3000
+    networks:
+        app:
+            ipv4_address: 172.16.238.11 
     restart: always
+
+networks:
+    app:
+        driver: bridge
+        ipam:
+            driver: default
+            config:
+                - subnet: 172.16.238.0/24
+                  gateway: 172.16.238.1

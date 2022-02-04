@@ -173,3 +173,10 @@ async def websocket_endpoint(
                 await room.broadcast(202, f"{user.name} left chat", user.name)
         except RuntimeError:
             manager.delete_connections(name)
+@router.websocket("/ws")
+async def adada(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        print(data)
+        data = await websocket.receive_text()
+        await websocket.send_text(f"Message text was: {data}")

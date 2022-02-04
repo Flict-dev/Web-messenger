@@ -85,13 +85,16 @@ const Room: React.FC = () => {
       time: string;
     };
     const ws = new WebSocket(
-      `ws://web-messanger-backend/api/v1${ReqSettings.url}?session=${ReqSettings.session}`
+      `ws://localhost:8080/api/v1${ReqSettings.url}?session=${ReqSettings.session}`
     );
     ws.onopen = (e) => {};
     ws.onclose = (event: CloseEvent) => {
       setWsError(true);
       setAnimMsg("Connection closed!");
     };
+    ws.onerror = (e) => {
+      console.log(e)
+    }
     ws.onmessage = (event: MessageEvent) => {
       const response: wsResponse = JSON.parse(event.data);
       const hadnler = wsHandler[response.status];
