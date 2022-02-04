@@ -32,11 +32,6 @@ Go to http://localhost:8000/
 
 
 ## Quick Dev Start
-- Git
-  - clone repo
-     ```bash 
-      git clone https://github.com/Flict-dev/Web-messenger.git
-      ```
 - Run Backend
   - Create virtual environment <br>
      ```bash 
