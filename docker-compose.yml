@@ -3,6 +3,7 @@ version: '3.9'
 services:
   web-messanger-backend:
     container_name: web-messanger-backend
+    image: flict/web-messanger-backend:latest
     build: ./backend
     ports:
       - 8080:8000
@@ -13,6 +14,7 @@ services:
     
   web-messanger-frontend:
     container_name: web-messanger-frontend
+    image: flict/web-messanger-frontend:latest
     build: ./frontend
     ports:
       - 8000:3000
