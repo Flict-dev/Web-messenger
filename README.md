@@ -23,7 +23,14 @@ A small Web Messenger with **[End-to-End](https://en.wikipedia.org/wiki/End-to-e
 - **[Prettier](https://prettier.io/)**/**[ESLint](https://eslint.org/)** (Typescript)
 - [Black](https://github.com/psf/black) (Python)
 
-## Quick Start
+## Docker
+```bash
+docker compose up
+```
+Go to http://localhost:8000/
+
+
+## Quick Dev Start
 - Git
   - clone repo
      ```bash 
