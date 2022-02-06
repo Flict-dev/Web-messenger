@@ -39,7 +39,7 @@ Go to http://localhost:8000/
       ```
    - Activate virtual environment
        ```bash 
-       Windows: env/Scripts/activate 
+       Windows: env/Scripts/activate
        Linux: source env/bin/activate
        ```
     - Install requirements
@@ -50,7 +50,7 @@ Go to http://localhost:8000/
        ```bash
        cd backend
        cd app
-       uvicorn main:app --host '<ip>' --port <port> 
+       uvicorn main:app --host '<ip>' --port <port>
        ```
 - Run Frontend
   - Install all node packages
@@ -59,7 +59,7 @@ Go to http://localhost:8000/
     npm install
     ```
   - Run react server
-    ```bash 
+    ```bash
     npm start
     ```
 
