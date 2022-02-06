@@ -34,13 +34,13 @@ Go to http://localhost:8000/
 ## Quick Dev Start
 - Run Backend
   - Create virtual environment <br>
-     ```bash 
+      ```bash 
       python -m venv env
       ```
    - Activate virtual environment
        ```bash 
-        Windows: env/Scripts/activate 
-        Linux: source env/bin/activate
+       Windows: env/Scripts/activate 
+       Linux: source env/bin/activate
        ```
     - Install requirements
        ```bash 
@@ -48,10 +48,10 @@ Go to http://localhost:8000/
        ```
     - Run FastAPI server
        ```bash
-        cd backend
-        cd app
-        uvicorn main:app --host '<ip>' --port <port> 
-        ```
+       cd backend
+       cd app
+       uvicorn main:app --host '<ip>' --port <port> 
+       ```
 - Run Frontend
   - Install all node packages
     ```bash 
