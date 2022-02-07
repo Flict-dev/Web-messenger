@@ -1,4 +1,4 @@
-# React + FastAPI · [![license](https://img.shields.io/github/license/peaceiris/actions-gh-pages.svg)](LICENSE) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+# FastAPI + React · [![license](https://img.shields.io/github/license/peaceiris/actions-gh-pages.svg)](LICENSE) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 <div>
 <img src="assets/fastapi-logo.png" alt="fastapi-logo" height="60" />
@@ -23,21 +23,24 @@ A small Web Messenger with **[End-to-End](https://en.wikipedia.org/wiki/End-to-e
 - **[Prettier](https://prettier.io/)**/**[ESLint](https://eslint.org/)** (Typescript)
 - [Black](https://github.com/psf/black) (Python)
 
-## Quick Start
-- Git
-  - clone repo
-     ```bash 
-      git clone https://github.com/Flict-dev/Web-messenger.git
-      ```
+## Docker
+```bash
+git clone https://github.com/Flict-dev/Web-messenger.git
+docker compose up
+```
+Go to http://localhost:8000/
+
+
+## Quick Dev Start
 - Run Backend
   - Create virtual environment <br>
-     ```bash 
+      ```bash 
       python -m venv env
       ```
    - Activate virtual environment
        ```bash 
-        Windows: env/Scripts/activate 
-        Linux: source env/bin/activate
+       Windows: env/Scripts/activate
+       Linux: source env/bin/activate
        ```
     - Install requirements
        ```bash 
@@ -45,10 +48,10 @@ A small Web Messenger with **[End-to-End](https://en.wikipedia.org/wiki/End-to-e
        ```
     - Run FastAPI server
        ```bash
-        cd backend
-        cd app
-        uvicorn main:app --host '<ip>' --port <port> 
-        ```
+       cd backend
+       cd app
+       uvicorn main:app --host '<ip>' --port <port>
+       ```
 - Run Frontend
   - Install all node packages
     ```bash 
@@ -56,7 +59,7 @@ A small Web Messenger with **[End-to-End](https://en.wikipedia.org/wiki/End-to-e
     npm install
     ```
   - Run react server
-    ```bash 
+    ```bash
     npm start
     ```
 
