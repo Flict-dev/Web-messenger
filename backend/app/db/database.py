@@ -1,16 +1,16 @@
-from typing import Dict, List
+from typing import List
 from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
-from db.create_tables import Rooms, Users, Messages, MsgKeys
+from db.init_tables import Rooms, Users, Messages, MsgKeys
 from fastapi import HTTPException, status
 from utils.crypt import Decoder
 from core.config import settings
 
 
-class DtabaseHelper:
-    def __init__(self, path: str, echo: bool = False) -> None:
-        self._engine = create_engine(path, echo=echo)
+class CoreDatabase:
+    def __init__(self, echo: bool = False) -> None:
+        self._engine = create_engine(settings.DBURL, echo=echo)
         self._metadata = MetaData()
         self._metadata.reflect(self._engine)
         self._session = sessionmaker(bind=self._engine)
@@ -35,9 +35,9 @@ class DtabaseHelper:
         return tables[tableName]
 
 
-class DatabaseGet(DtabaseHelper):
-    def __init__(self, path: str, echo: bool = False) -> None:
-        super().__init__(path, echo)
+class DatabaseRead(CoreDatabase):
+    def __init__(self) -> None:
+        super().__init__()
 
     def get_room_by_id(self, id: int) -> Rooms or HTTPException:
         roomTable = self.get_table("Rooms")
@@ -69,8 +69,6 @@ class DatabaseGet(DtabaseHelper):
             )
         return user
 
-    """ May be broken """
-
     def get_user_by_name(self, username: str, room_id: int) -> Users or HTTPException:
         room = self.get_room_by_id(room_id)
         names = list(map(lambda x: x.name, room.users))
@@ -81,8 +79,6 @@ class DatabaseGet(DtabaseHelper):
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
-    """ May be broken """
-
     def get_all_messages(self, room: Rooms) -> List[Messages]:
         users, messages = room.users, []
         for user in users:
@@ -90,9 +86,9 @@ class DatabaseGet(DtabaseHelper):
         return sorted(messages, key=lambda msg: msg.created_at)
 
 
-class Database(DatabaseGet):
-    def __init__(self, path: str, echo: bool = False) -> None:
-        super().__init__(path, echo)
+class DatabaseCreate(CoreDatabase):
+    def __init__(self) -> None:
+        super().__init__()
 
     def create_room(self, name: str, password: str) -> Rooms or HTTPException:
         roomTable = self.get_table("Rooms")
@@ -126,13 +122,27 @@ class Database(DatabaseGet):
             session.commit()
             return message
 
-    def delete_room(self, room: Rooms) -> None:
-        with self.session as session:
-            session.delete(room)
-            session.commit()
+
+class DatabaseUpdate(CoreDatabase):
+    def __init__(self) -> None:
+        super().__init__()
 
     def ban_user(self, user: Users) -> None:
         with self.session as session:
             user.status = False
             session.add(user)
             session.commit()
+
+
+class DatabaseDelete(CoreDatabase):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def delete_room(self, room: Rooms) -> None:
+        with self.session as session:
+            session.delete(room)
+            session.commit()
+
+
+class Database(DatabaseCreate, DatabaseUpdate, DatabaseDelete, DatabaseRead):
+    pass

@@ -7,7 +7,7 @@ from fastapi import status, HTTPException
 
 class Parser:
     def __init__(self):
-        self._database = Database(settings.DBURL)
+        self._database = Database()
         self._decoder = Decoder(settings.SECRET_KEY)
 
     @staticmethod
@@ -33,7 +33,7 @@ class Parser:
         )
         return users
 
-    def get_room_data(self, name: str, session: str = "") -> tuple:
+    def get_room_data(self, name: str, session: str = "") -> tuple or HTTPException:
         hashed_name = self.parse_link_hash(name)
         if session:
             d_session = self._decoder.decode_session(session)

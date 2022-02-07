@@ -92,9 +92,6 @@ const Room: React.FC = () => {
       setWsError(true);
       setAnimMsg("Connection closed!");
     };
-    ws.onerror = (e) => {
-      console.log(e)
-    }
     ws.onmessage = (event: MessageEvent) => {
       const response: wsResponse = JSON.parse(event.data);
       const hadnler = wsHandler[response.status];

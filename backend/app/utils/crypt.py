@@ -1,3 +1,4 @@
+from ast import Dict
 import jwt
 from time import time
 from core.config import settings
@@ -13,18 +14,17 @@ class Encoder:
     def __init__(self, sessionKey: str, sessionAlg: str = "HS256") -> None:
         self._context = CryptContext(schemes=["bcrypt"])
         self._sessionKey = sessionKey
-        self.sessionAlg = sessionAlg
+        self._sessionAlg = sessionAlg
 
     @property
     def key(self):
-        key = Fernet.generate_key()
-        return str(key, encoding="utf-8")
+        return str(Fernet.generate_key(), encoding="utf-8")
 
     @staticmethod
     def gen_hash_link(name: str) -> str:
         return name.split("$")[-1].replace("/", "slash").replace("\\", "hsals")
 
-    def hash_text(self, text: str) -> str:
+    def hash_text(self, text: str) -> str or HTTPException:
         try:
             return self._context.hash(text)
         except UnknownHashError:
@@ -33,7 +33,7 @@ class Encoder:
                 detail={"Status", "Invalid hash"},
             )
 
-    def hash_room_data(self, data) -> tuple:
+    def hash_room_data(self, data: Dict) -> tuple or HTTPException:
         json_data = pydantic_decoder(data)
         if json_data["password"] and json_data["name"]:
             return (
@@ -62,7 +62,7 @@ class Encoder:
                 "expires": time() + settings.JWT_TIME_LIVE,
             },
             key=self._sessionKey,
-            algorithm=self.sessionAlg,
+            algorithm=self._sessionAlg,
         )
         return session
 
@@ -71,12 +71,13 @@ class Decoder:
     def __init__(self, sessionKey: str, sessionAlg: str = "HS256") -> None:
         self._context = CryptContext(schemes=["bcrypt"])
         self._sessionKey = sessionKey
-        self.sessionAlg = sessionAlg
-        self.encoder = Encoder(sessionKey)
+        self._sessionAlg = sessionAlg
 
-    def decode_session(self, session: str) -> dict:
+    def decode_session(self, session: str) -> dict or HTTPException:
         try:
-            return jwt.decode(session, key=self._sessionKey, algorithms=self.sessionAlg)
+            return jwt.decode(
+                session, key=self._sessionKey, algorithms=self._sessionAlg
+            )
         except DecodeError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -86,7 +87,7 @@ class Decoder:
     def verify_hash(self, plain_text: str, hashed_text: str) -> bool:
         return self._context.verify(plain_text, hashed_text)
 
-    def parse_session(self, session):
+    def parse_session(self, session: str) -> tuple:
         decoded_session = self.decode_session(session)
         return (
             decoded_session["name"],

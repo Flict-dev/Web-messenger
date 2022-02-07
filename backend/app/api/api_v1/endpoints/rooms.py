@@ -10,17 +10,15 @@ from fastapi import (
     Depends,
 )
 from fastapi.encoders import jsonable_encoder as pydantic_decoder
+from core.tools import manager, parser, encoder, decoder, database
+from fastapi_csrf_protect import CsrfProtect
 from fastapi.responses import JSONResponse
-from typing import Optional, Dict
 from api.wsmanager import Room, Connection
 from api.wshandler import WsHandler
 from schemes.room import RoomAuth
-from schemes.user import UserBlock
-from core.tools import manager, parser, encoder, decoder, database
 from core.config import settings
 from pydantic import BaseModel
-from db.create_tables import Users
-from fastapi_csrf_protect import CsrfProtect
+from typing import Optional
 
 router = APIRouter()
 
@@ -40,7 +38,7 @@ async def room_password_auth(
     auth: RoomAuth,
     x_token: Optional[str] = Header(None),
     authorization: Optional[str] = Header(None),
-):
+) -> JSONResponse or HTTPException:
     msg_key = decoder.get_key(authorization) if authorization else ""
     data = pydantic_decoder(auth)
     username, password = data["username"], data["password"]
@@ -81,7 +79,7 @@ async def room(
     name: str,
     authorization: Optional[str] = Header(None),
     csrf_protect: CsrfProtect = Depends(),
-):
+) -> JSONResponse or HTTPException:
     hashed_name, room, user = parser.get_room_data(name, authorization)
     if decoder.verify_session(hashed_name, authorization, user.status):
         enc_messages, messages = database.get_all_messages(room), []
@@ -123,7 +121,7 @@ async def delete_room(
     name: str,
     authorization: Optional[str] = Header(None),
     csrf_protect: CsrfProtect = Depends(),
-):
+) -> JSONResponse or HTTPException:
     csrf_token = csrf_protect.get_csrf_from_headers(request.headers)
     csrf_protect.validate_csrf(csrf_token)
     hashed_name, room, user = parser.get_room_data(name, authorization)
@@ -144,7 +142,7 @@ async def delete_room(
 @router.websocket("/{name}")
 async def websocket_endpoint(
     websocket: WebSocket, name: str, session: Optional[str] = Query(None)
-):
+) -> None:
     hashed_name, room_obj, user = parser.get_room_data(name, session)
     if decoder.verify_session(hashed_name, session, user.status):
         decoded_session = decoder.decode_session(session)
@@ -173,10 +171,3 @@ async def websocket_endpoint(
                 await room.broadcast(202, f"{user.name} left chat", user.name)
         except RuntimeError:
             manager.delete_connections(name)
-@router.websocket("/ws")
-async def adada(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        print(data)
-        data = await websocket.receive_text()
-        await websocket.send_text(f"Message text was: {data}")

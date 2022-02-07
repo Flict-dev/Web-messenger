@@ -7,7 +7,7 @@ router = APIRouter()
 
 
 @router.post("/")
-async def create_room(room: RoomReq):
+async def create_room(room: RoomReq) -> JSONResponse:
     h_name, h_pswd = encoder.hash_room_data(room)
     room = database.create_room(h_name, h_pswd)
     user = database.create_user("Admin", True, room)

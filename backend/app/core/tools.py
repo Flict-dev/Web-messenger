@@ -7,5 +7,5 @@ from core.config import settings
 manager = RoomsManager()
 encoder = Encoder(settings.SECRET_KEY)
 decoder = Decoder(settings.SECRET_KEY)
-database = Database(settings.DBURL)
+database = Database()
 parser = Parser()
